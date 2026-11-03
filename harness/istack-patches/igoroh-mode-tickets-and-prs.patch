@@ -1,0 +1,257 @@
+diff --git a/claude-code/README.md b/claude-code/README.md
+index 7eadf29..64bfe15 100644
+--- a/claude-code/README.md
++++ b/claude-code/README.md
+@@ -89,7 +89,7 @@ morning.
+ | [pause safely](./skills/igoroh-mode/playbooks/pause-safely.md) | suspend in-flight work cleanly so it can be resumed later. |
+ | [multi-phase plan](./skills/igoroh-mode/playbooks/multi-phase-plan.md) | work that spans phases or stacked PRs. |
+ | [worktree cleanup](./skills/igoroh-mode/playbooks/worktree-cleanup.md) | reclaim disk by pruning merged or abandoned worktrees and stale ios simulators, safety-gated. |
+-| [opening a pr](./skills/igoroh-mode/playbooks/opening-a-pr.md) | open a ready pr from small ordered commits with a conventional commits title and a briefing-style body. invoked at the end of every other playbook. |
++| [opening a pr](./skills/igoroh-mode/playbooks/opening-a-pr.md) | open a draft pr from small ordered commits, with a conventional commits title that carries the ticket id and a body from the `pr` skill. invoked at the end of every other playbook. |
+ 
+ </details>
+ 
+diff --git a/claude-code/skills/igoroh-mode/SKILL.md b/claude-code/skills/igoroh-mode/SKILL.md
+index 26deeb1..304f19b 100644
+--- a/claude-code/skills/igoroh-mode/SKILL.md
++++ b/claude-code/skills/igoroh-mode/SKILL.md
+@@ -18,7 +18,7 @@ The Principles section below grounds every trigger. In your reply, name each pri
+ 
+ Remaining triggers:
+ 
+-- Your first message on a task → tell the user, in your own words, their goal, the problem they are solving, and, if the task ships a change, the smallest change you expect to meet it. Don't wait for confirmation. If the evidence rules out the change the user asked for, show it and stop. Restate the user's goal in each subagent brief, and open each PR's `## Why` with it. Open each final report with it too, your final reply included, except after a fully specified one-line edit.
++- Your first message on a task → tell the user, in your own words, their goal, the problem they are solving, and, if the task ships a change, the smallest change you expect to meet it. Don't wait for confirmation. If the evidence rules out the change the user asked for, show it and stop. Restate the user's goal in each subagent brief, and open each PR's `## Summary` with it. Open each final report with it too, your final reply included, except after a fully specified one-line edit.
+ - Nontrivial change, architecture decision, or "are we sure?" → the **how** skill.
+ - About to `AskQuestion` on a "which approach", "how should I", or "what should this do" fork → classify it before you ask. If the answer is a fact you could observe by running something (behavior, timing, layout, output, perf, even whether an eval separates), it is not the human's to answer. Sketch it via the Prototype playbook (`playbooks/prototype.md`) and let the result decide. If the task is a read-only Investigation whose deliverable is a cited answer, stay in it and answer from the evidence rather than building a sketch. Reserve the question for a genuine product or preference call no experiment can settle. Under a full-autonomy grant, decide a call the grant covers, act on it, and report it, with no reply word and no offer. Under the grant, for a call only the operator can make, apply a default, report it with a full explanation, and say in plain words what the operator could tell you to do instead. The operator answers in their own words. Never give a shorthand token to type back. Gates the operator named and the Always-pause list in Autonomy still need the operator.
+ - Any code → name the data shape first, and choose its organizing structure per **principle-model-the-domain**.
+@@ -27,7 +27,7 @@ Remaining triggers:
+ - Contested design → the **interrogate** skill (multi-model adversarial) before shipping.
+ - Nontrivial multi-step → write the throughput checkpoint (Feature step 3).
+ - Any prose surface, your reply to the user included → the **unslop** skill. Write the reply per **Writing the reply**. Agent-facing prose also follows the **create-skill** skill (Cursor's built-in for authoring SKILL.md files).
+-- Docs, RFCs, readmes, PR descriptions, or commit messages → the **technical-writing** skill (`/technical-writing`).
++- Docs, RFCs, readmes, PR titles, or commit messages → the **technical-writing** skill (`/technical-writing`). PR descriptions → the `pr` skill.
+ - Before commit → the `deslop` skill from the `cursor-team-kit` plugin (`/deslop`).
+ - Before review → the **no-comments** skill (`/no-comments`).
+ - Shipping UI / IDE / CLI → the matching control skill. `cursor-team-kit` publishes `control-cli` (CLIs and TUIs) and `control-ui` (browser / Electron / web UIs). For bug fixes, reproduce first on the same surface yourself. Hand to the user only under the narrow Bug fix step 1 exception.
+@@ -91,6 +91,20 @@ Read the leaf skill in full for any principle you apply. Each entry names when i
+ 
+ **No is an acceptable answer.** Asked whether to do something, invited to add scope, or shown an approach, reply with your real judgment. Decline, push back, or say "this doesn't earn its place" when true. A recommendation is a judgment, not a validation. Agreement is not the default, candor over sycophancy.
+ 
++## Tickets and PRs
++
++The tracker is Notion. A repo can have a local ticket file with the database, statuses, and `ntn` commands, such as `~/.herdr/worktrees/studio/CLAUDE.md` for studio. When it loads, it overrides the defaults here.
++
++**Intake.** Before you write code, read the whole ticket, with its properties, description, comments, and linked pages. When the user gives a board URL, find their open ticket on it, and do not ask which one. Each ticket gets its own worktree and branch, per `playbooks/opening-a-pr.md`. When no ticket is given, ask once. "No ticket" is a valid answer.
++
++**Status.** Set In progress when real work starts. Set Verification when the PR is ready for review, which a babysit does. Done, Descoped, and Awaiting release belong to the user. Put a reason for On hold in a comment, never in the description. Start each comment with `🤖 Agent:`.
++
++**Creating tickets.** Only when the user asks, and only for work assigned to the user. One problem per ticket. The body has `## Problem` (the failure that a person can see, with its evidence, such as a URL, error text, or screenshot), `## Cause` when known, and `## Expected`. Do not write the fix or a plan unless the user asks for it. Assign the user. Set the status to Backlog or TODO. Select tags from the tracker's fixed set that match the part of the repo the work touches. Put related tickets in the relation field, and the source (meeting, chat, PR) as a link. When the user says a ticket is wrong, rewrite it in place, and do not add a second ticket.
++
++**PRs.** `playbooks/opening-a-pr.md` opens them as drafts. `playbooks/babysit.md` marks them ready and gets the checks green. Merges and deploys wait for the user's command.
++
++**Review feedback.** The user reviews in Hunk (the **hunk-review** skill). Read their notes, number your findings, and answer in the chat. Never write comments into Hunk. Fix agreed items as `fixup!` commits per `playbooks/opening-a-pr.md`, then update the PR body.
++
+ ## Subagents
+ 
+ **Use `subagent_type: "igoroh-agent"` for any subagent you spawn inside a playbook step** (code-writing delegates, ad-hoc helpers). The chat that receives `/igoroh-mode` runs the playbook. Never spawn a `igoroh-agent` to run the playbook itself. Routed workflow skills (`how`, `why`, `interrogate`, `reflect`, `swarm`) set their own `subagent_type` for diverse-model review. Respect what the skill prescribes, don't override to `igoroh-agent`.
+diff --git a/claude-code/skills/igoroh-mode/playbooks/babysit.md b/claude-code/skills/igoroh-mode/playbooks/babysit.md
+index c3da4e8..dfb3c01 100644
+--- a/claude-code/skills/igoroh-mode/playbooks/babysit.md
++++ b/claude-code/skills/igoroh-mode/playbooks/babysit.md
+@@ -4,7 +4,7 @@
+ 
+ Babysitting starts when the user asks for it, which is normally once a phase or a whole stack is built, not when a PR opens. Finish the stack, get it green here, then land it through Shipping.
+ 
+-1. **Declare the mode and resolve the forge before any poll.** `drive` runs the loop to merge-ready, for "babysit this", "get it green", "merge-ready". `background` triages without blocking, which is the mode for a plan still executing. `threads-only` answers review comments and touches nothing else, for "address the bugbot comments". `check` is one status pass and a report, for "check on X" and "is it green". Undeclared defaults to `drive`. Small or docs-only PRs get `check`, not `drive`. GitHub CLI (`gh`) is the default. If `command -v origin` succeeds and Origin can resolve the repository, use `origin pr ...` for view, checks, threads, and later shipping. Otherwise stay on `gh` and record the fallback. Never require Graphite (`gt`).
++1. **Declare the mode and resolve the forge before any poll.** `drive` runs the loop to merge-ready, for "babysit this", "get it green", "merge-ready". `background` triages without blocking, which is the mode for a plan still executing. `threads-only` answers review comments and touches nothing else, for "address the bugbot comments". `check` is one status pass and a report, for "check on X" and "is it green". Undeclared defaults to `drive`. Small or docs-only PRs get `check`, not `drive`. GitHub CLI (`gh`) is the default. If `command -v origin` succeeds and Origin can resolve the repository, use `origin pr ...` for view, checks, threads, and later shipping. Otherwise stay on `gh` and record the fallback. Never require Graphite (`gt`). In `drive`, first mark each draft PR in scope ready with `gh pr ready <pr>` or `origin pr ready <pr>`.
+ 2. **Work the merge frontier and nothing above it.** The lowest unmerged PR is the only one that matters until it merges. Uistack threads get read and batched, never fixed at the cost of restarting the frontier's checks. If you catch yourself uistack while the frontier is red, stop and go back down.
+ 3. **One babysitter per stack.** Before starting, check nothing else is already on it.
+ 4. **Never mutate stack topology.** No base retarget, rebase, stack-wide submit, or force-push from inside a babysit. Fix on the owning branch, report anything rebase-shaped upward, and let the owner do it. An Autopilot-full or Autopilot-stack owner babysitting its own PR is that owner. Where this playbook says to report a rebase, that owner rebases its own branch and publishes it with `git push --force-with-lease` per `playbooks/autopilot-full.md` step 2. The one sanctioned creation: when a fix's owning PR has already merged, it becomes a new PR on top of the remaining stack, never a rewrite of merged history, and it is the single case where the frozen queue list of step 6 changes.
+@@ -16,8 +16,8 @@ Babysitting starts when the user asks for it, which is normally once a phase or
+    On GitHub, stop at `READY` for one PR (single or stack mode). Queued mode never emits `READY`. A blocker-free frontier is a non-terminal `WAITING` with reason `merge-queue`. Report that frontier merge-ready and stop the watcher. Do not leave it running until merges happen. That is Shipping's job. If another actor merges the frontier and the watcher reports `ADVANCE`, continue with the new frontier. `COMPLETE` is terminal if another actor finishes the queue.
+ 
+    Answer a user question mid-loop and continue. Only an explicit stop ends the loop before the active forge's stop condition. On GitHub, that is `READY` in single or stack mode, or a `WAITING`/`merge-queue` report or `COMPLETE` in queued mode. On Origin, that is the merge-ready state defined above. For a GitHub queued stack, capture the PR list bottom-to-top once and pass the same frozen list to every rearm. Revise the list only for the sanctioned follow-up PR from step 4. Append it at the end, drop the merged owner, and rearm with the corrected snapshot.
+-7. **Classify CI before any retrigger.** Flake or infrastructure earns one fresh build, never a job retry. One retry only. An identical second failure means it was never flake, so reclassify and read the child logs instead of retrying blind. A failure in code the diff never touches means a stale base, so check with `git merge-base --is-ancestor` before assuming flake. Report a stale base as needing a rebase instead of burning retries. Only a failure in the diff's own code gets a commit.
+-8. **Bugbot is triaged skeptically, always.** Verify each claim against the code per `../references/bugbot-triage.md`. Fix real findings with a red-first proof in the lowest PR that owns the code, never at the tip unless the owning PR has merged. In that case, use step 4's sanctioned follow-up PR. Per step 2, uistack fixes wait for step 5's next frontier-driven push wave. Push that wave before replying so the reply cites the commit. On Origin, reply with `origin pr thread reply <thread-id> <pr> --body-file <reply-file>`. On GitHub, call `gh api --method POST "repos/<owner>/<repo>/pulls/<pr>/comments/<comment-id>/replies" --input <payload.json>` and put the reply body in the JSON file as data. Never interpolate comment text or a reply into a shell command. Dismiss noise with the concrete disproof on the thread. On GitHub, use the watcher's Bugbot pass count. On Origin, derive the pass count from `origin pr thread list` and the review history. From the third pass on, lean toward dismissing documented patterns, still escalating anything touching security, auth, billing, data, or migrations rather than dismissing it yourself. Never churn code to quiet a bot.
++7. **Approve check gates, never deploy gates.** A run held by environment gates for checks (build, lint, test, images) is yours to approve without asking. Never approve a gate that deploys to an environment (dev1, stage, prod) unless the user commanded that deploy. **Classify CI before any retrigger.** Flake or infrastructure earns one fresh build, never a job retry. One retry only. An identical second failure means it was never flake, so reclassify and read the child logs instead of retrying blind. A failure in code the diff never touches means a stale base, so check with `git merge-base --is-ancestor` before assuming flake. Report a stale base as needing a rebase instead of burning retries. Only a failure in the diff's own code gets a commit.
++8. **Bugbot is triaged skeptically, always.** Verify each claim against the code per `../references/bugbot-triage.md`. Fix real findings with a red-first proof in the lowest PR that owns the code, never at the tip unless the owning PR has merged. In that case, use step 4's sanctioned follow-up PR. Per step 2, uistack fixes wait for step 5's next frontier-driven push wave. Push that wave before replying so the reply cites the commit. On Origin, reply with `origin pr thread reply <thread-id> <pr> --body-file <reply-file>`. On GitHub, call `gh api --method POST "repos/<owner>/<repo>/pulls/<pr>/comments/<comment-id>/replies" --input <payload.json>` and put the reply body in the JSON file as data. Never interpolate comment text or a reply into a shell command. Dismiss noise with the concrete disproof on the thread. On GitHub, use the watcher's Bugbot pass count. On Origin, derive the pass count from `origin pr thread list` and the review history. From the third pass on, lean toward dismissing documented patterns, still escalating anything touching security, auth, billing, data, or migrations rather than dismissing it yourself. Never churn code to quiet a bot. Human review comments: read review comments, issue comments, and reviews. Fix them per this step, then answer each one in the chat. Post a reply on GitHub only when the user asks.
+ 9. **Stop at the human's line.** Owner approval is a wait, not a blocker to fix. Babysitting never authorizes merging. Only an explicit request to merge, land, ship, or merge when ready does. Route that request to Shipping. Surface the escalation and keep working the rest. After GitHub reports `READY`, a queued `WAITING`/`merge-queue` stop, or `COMPLETE`, or after Origin reports the frontier merge-ready, sweep the run's triage decisions once. Offer any team-useful dismissal pattern as a candidate entry in the shared rubric (`../references/bugbot-triage.md`) and its own PR. Never keep it only in private memory.
+ 
+-`drive` ends at merge-ready. Landing the stack is `playbooks/shipping.md`.
++`drive` ends at merge-ready. Then set each merge-ready PR's ticket to Verification, per the **Tickets and PRs** section of `../SKILL.md`. Landing the stack is `playbooks/shipping.md`.
+diff --git a/claude-code/skills/igoroh-mode/playbooks/multi-phase-plan.md b/claude-code/skills/igoroh-mode/playbooks/multi-phase-plan.md
+index 72cd3bf..ee4e5de 100644
+--- a/claude-code/skills/igoroh-mode/playbooks/multi-phase-plan.md
++++ b/claude-code/skills/igoroh-mode/playbooks/multi-phase-plan.md
+@@ -54,7 +54,7 @@ Tests alone are not sufficient verification. A PR is verified only when its unit
+ ### PR mechanics, for every PR
+ 
+ - [ ] Resolve the forge once. Default to `gh`; if `command -v origin` succeeds and Origin can resolve the repository, use `origin pr` for every PR operation. Record any fallback to `gh`. Never require `gt`.
+-- [ ] Open the PR ready, never draft, per **Opening a PR**. Use the run's built-in PR tool when it has one, else `origin pr create --status open --base <base-branch>` or `gh pr create --base <base-branch>` according to the resolved forge. A stack child targets its parent branch.
++- [ ] Open the PR as a draft, per **Opening a PR**. Use the run's built-in PR tool when it has one, else `origin pr create --base <base-branch>` or `gh pr create --draft --assignee @me --base <base-branch>` according to the resolved forge. A stack child targets its parent branch.
+ - [ ] Run the repo's lint and typecheck once before the PR-facing push. Push with hooks on.
+ - [ ] Run `/deslop` before each commit and `/no-comments` before review.
+ - [ ] Triage every Bugbot and security-reviewer comment per `../references/bugbot-triage.md`.
+diff --git a/claude-code/skills/igoroh-mode/playbooks/opening-a-pr.md b/claude-code/skills/igoroh-mode/playbooks/opening-a-pr.md
+index 0ed495d..d37dee4 100644
+--- a/claude-code/skills/igoroh-mode/playbooks/opening-a-pr.md
++++ b/claude-code/skills/igoroh-mode/playbooks/opening-a-pr.md
+@@ -2,32 +2,28 @@
+ 
+ Invoked at the end of every other playbook.
+ 
+-**Worktree.** Work from a git worktree off main. Subagents inherit it. Multiple `Task` calls on the same branch each get their own worktree, or `git fetch && git reset --hard origin/<branch>` between them. Dirty branch with unrelated work: patch out, fresh worktree, apply. Snarled worktree: reset from main, redo minimally.
++**Worktree and branch.** Work from a git worktree off main. Subagents inherit it. Multiple `Task` calls on the same branch each get their own worktree, or `git fetch && git reset --hard origin/<branch>` between them. Dirty branch with unrelated work: patch out, fresh worktree, apply. Snarled worktree: reset from main, redo minimally. Name the branch `<ticket-id>-<slug>` in lower-case kebab case, such as `ag-241-crop-card-previews`. Without a ticket, use a plain kebab-case name.
+ 
+-**Commits.** Commit liberally. Rebase into small, ordered commits before opening PRs. Each commit is a future PR: landable, ordered to tell the story. Amend when the fix belongs in a just-made commit. New commit when separable. Commit bodies don't restate the subject.
++**Commits.** Commit liberally, so that the commit history makes the review easy. A mechanical refactor never shares a commit with a behavior change. Tests go in the same commit as the code they test. Subjects are imperative, sentence case, at most 72 characters, with no type prefix and no ticket ID. Add a body only when the diff does not show the why. Before the first review, rebase into small ordered commits. After review starts, add `fixup!` commits and never rewrite pushed history, unless the user tells you to.
+ 
+-**PRs.** Run `/deslop` from `cursor-team-kit` over the diff before commit and `/no-comments` before review. Write every PR title, description, and commit body with `/technical-writing` (every layer except Diátaxis, and apply the STE vocabulary rules: one word per action, keep articles, a plain verb over `-ing` where one works), then apply `/unslop`.
++**PRs.** Run `/deslop` from `cursor-team-kit` over the diff before commit and `/no-comments` before review. Write titles and commit bodies with `/technical-writing` (every layer except Diátaxis, and apply the STE vocabulary rules: one word per action, keep articles, a plain verb over `-ing` where one works). Write the description with the `pr` skill. Apply `/unslop` to all of them.
+ 
+-**Titles.** Conventional Commits `type(scope): subject`, no trailing period. Type such as `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, or `perf`. Scope is the area, such as `istack` or `igoroh-mode`. Subject is short, imperative, and names a real symbol when one carries the change, for example `fix(istack): retarget opening-a-pr babysit trigger`.
++**Titles.** Conventional Commits `type(scope): subject`, no trailing period. Type such as `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, or `perf`. Scope is the area, such as `artifacts` or `igoroh-mode`. When a ticket exists, its ID starts the subject, for example `feat(artifacts): AG-241 crop card previews to the page`. The subject is short and imperative. PRs are squash-merged, so the title becomes the commit on main. Update the title when the scope of the branch changes.
+ 
+-**Descriptions.** The PR body is a one-minute briefing, not a lab notebook, for a reviewer who has the diff. It says why the change exists, what it leaves out, what it could break, and how you proved it works. Write short, simple sentences with few identifiers, no walls of text. The body becomes the squash commit body, so keep that commit under about 40 lines. Use `##` headings, not bold lead-ins, in this order, and drop a section with nothing to say:
++**Descriptions.** Follow the `pr` skill (Summary, Evidence, Merge Danger). Put these lines above the first heading:
+ 
+-- `## Why`: the problem and approach, 1–3 short sentences. No SHAs, rebase genealogy, or "based on main" preamble.
+-- `## What changed`: 1–3 short bullets. Name a real symbol or path only when it carries the change. Name both sides of a rename or retarget.
+-- `## Scope`: always. 1–3 short items on what it covers and what it deliberately leaves out (a follow-up, a known gap). No symbols, paths, or file-by-file essay.
+-- `## Tradeoffs`: only rejected alternatives a reviewer would otherwise ask about. Skip when there was no real choice.
+-- `## Blast Radius`: 1–2 sentences on who or what it touches and why that is safe or risky. If main is red, state the cost of leaving it red.
+-- `## Verification`: 1–3 bullets, each a real run path and its outcome. Perf: one primary number with its unit, `before → after`, and a link to the arena or swarm directory for the rest. No sample-size methodology, swarm recitals, or metric tables.
++- `Ticket: <tracker url>` when a ticket exists. If the user gave the ticket ID but no URL, look it up in the tracker.
++- `Stacked on #<n>.` for a stack child.
+ 
+-After the sections, attach videos or screenshots when they prove a claim. Full SHAs, swarm or arena lane recitals, lever-correction essays, file-by-file checklists, and "CLEAN" verdicts go in a linked artifact, not the body.
++The body is a one-minute briefing for a reviewer who has the diff, and it becomes the squash commit body. Keep it short. Full SHAs, test-run logs, swarm or arena recitals, and file-by-file checklists stay out. Link an artifact when they matter. For a UI change, put screenshots in the Evidence section per `../references/pr-screenshots.md`. After each change to the branch, update the body, the title, and the screenshots. For a stack, update every affected layer in the same pass.
+ 
+ **Forge.** Resolve the forge before the first PR operation and keep that choice for create, edit, view, watch, and merge. GitHub CLI (`gh`) is the default. If `command -v origin` succeeds and Origin can resolve the repository, prefer `origin pr ...`. If Origin is absent or cannot resolve the repository, stay on `gh` and record the fallback. Do not require Graphite (`gt`).
+ 
+ **Built-in PR tool.** When the run provides a built-in PR tool, create, edit, retarget, and mark ready through it, never through a forge CLI. A CLI-made PR misses what the tool tracks. Use the resolved forge for everything the tool does not cover, and for every PR operation when the run has no such tool.
+ 
+-**Size and stacks.** Prefer five narrow PRs to one large PR. A stack is a base-branch chain. The root PR targets trunk. Each child branch rebases onto its parent's exact tip and its PR targets the parent branch. As a parent merges, move its child onto trunk per `playbooks/shipping.md` step 4. Without a built-in PR tool, per the resolved forge, create a child with `origin pr create --status open --base <parent-branch>` or `gh pr create --base <parent-branch>`, and retarget one with `origin pr edit <pr> --base <parent-branch>` or `gh pr edit <pr> --base <parent-branch>`. Branch from trunk only for independent work. Rebase on trunk before substantial stack work.
++**Size and stacks.** One concern per PR. Move a change that is out of scope into its own PR, and do not grow the current one. Propose a stack, never start one silently, when the task splits into vertical slices that you can deliver independently. Each slice goes through all layers (data model, API, UI) and gives one complete capability. Do not split by layer, except when that layer itself carries the risk, such as a difficult migration. A diff of more than about 500 non-generated lines is a secondary signal, not the trigger. Create the stack before you write files. Use GitHub native stacks through `gh stack` and the `gh-stack` skill, per `../references/gh-stack.md`. Agents must use only the non-interactive forms. Keep raw `git rebase` out of a tracked stack, and use `gh stack rebase --upstack`. A stack is strictly linear, so parallel work needs a separate stack. Without `gh stack`, a stack is a base-branch chain. Create a child with `gh pr create --base <parent-branch>` or `origin pr create --base <parent-branch>`, and retarget with `gh pr edit <pr> --base <parent-branch>` or `origin pr edit <pr> --base <parent-branch>`. As a parent merges, move its child onto trunk per `playbooks/shipping.md` step 4.
+ 
+-**Readiness.** Open every PR ready, never as a draft. A built-in PR tool can default to draft, so set `draft: false` on every creation call through it. With Origin, pass `--status open`. With `gh`, omit `--draft`. If a PR still opens as a draft, mark it ready through the PR tool, or run `origin pr ready <number>` or `gh pr ready <number>` according to the resolved forge. Run `origin pr view <number>` or `gh pr view <number>` before you refer to PR status.
++**Readiness.** Open every PR as a draft and assign it to the user, with `gh pr create --draft --assignee @me` or, for a stack, `gh stack submit --auto`, then `gh pr edit --add-assignee @me` on each layer. Only a babysit (`playbooks/babysit.md`) or a request from the user marks a PR ready. Run `origin pr view <number>` or `gh pr view <number>` before you refer to PR status.
+ 
+ **Babysit.** Opening a PR does not start a babysit. Post the URL and keep building. Finish the phase or stack first. Run a separate babysit pass only when the user asks for one after the whole stack exists. A babysit for each new PR stalls the build and spends checks on commits later waves restart. Push back when feedback drifts from intent.
+ 
+diff --git a/claude-code/skills/igoroh-mode/references/gh-stack.md b/claude-code/skills/igoroh-mode/references/gh-stack.md
+new file mode 100644
+index 0000000..74ad4f7
+--- /dev/null
++++ b/claude-code/skills/igoroh-mode/references/gh-stack.md
+@@ -0,0 +1,81 @@
++# gh stack cheat sheet
++
++GitHub native stacked PRs. CLI is `gh stack`, a `gh` extension.
++
++The official `gh-stack` skill (shipped by GitHub in `github/gh-stack` under `skills/`) is the
++authoritative reference and carries far more detail. This page is the minimum needed to work a
++stack without it.
++
++## Setup
++
++```sh
++gh extension install github/gh-stack
++git config rerere.enabled true         # remember conflict resolutions
++git config remote.pushDefault origin   # required when the repo has more than one remote
++```
++
++## Reading a stack
++
++`gh stack` prints trunk-first, left to right — left is the bottom, right is the top:
++
++```
++(main) <- auth <- api <- frontend
++```
++
++`auth` is based on `main` and merges first. `up` moves away from trunk, `down` moves toward it.
++
++## Creating a stack
++
++```sh
++gh stack init auth              # create the stack, check out its first branch
++git add ... && git commit -m "Add auth middleware"
++gh stack add api                # next layer, branched from the current one
++git add ... && git commit -m "Add API routes"
++gh stack submit --auto          # push every branch and open draft PRs
++```
++
++Branch names are taken verbatim. Add `--open` to `submit` for review-ready PRs instead of drafts.
++
++## Changing a lower layer
++
++```sh
++gh stack down                   # or: gh stack checkout api
++git add ... && git commit -m "Fix the thing"
++gh stack rebase --upstack       # replay every branch above onto the change
++gh stack top
++gh stack push
++```
++
++## Staying in sync, merging
++
++```sh
++gh stack sync [--prune]         # fetch, reconcile, rebase, push, refresh PR state
++gh stack merge <pr> --yes       # that PR plus every unmerged PR below it
++```
++
++`merge` is all-or-nothing: if any PR in the scoped set cannot merge, none do.
++
++## Driving it from an agent
++
++These are the rules that make the difference between working and hanging:
++
++| Always | Never | Why |
++| --- | --- | --- |
++| `gh stack view --json` | `gh stack view` | opens a TUI under a PTY |
++| `gh stack submit --auto` | `gh stack submit` | prompts per new PR |
++| `gh stack merge <t> --yes` | `gh pr merge` | `gh pr merge` cannot merge a stack |
++| `gh stack init <branch>` | `gh stack init` | prompts for names |
++| `gh stack add <branch>` | `gh stack add` | prompts, and fails even when piped |
++| `gh stack up` / `down` / `top` / `bottom` | `gh stack switch` | `switch` is menu-only |
++| — | `gh stack modify` | TUI-only; restructure with `unstack` then `init` |
++
++`view --json` writes JSON to stdout and status text to stderr — parse stdout, branch on exit codes.
++
++Exit codes: `0` success, `2` not in a stack, `3` rebase conflict (resolve, `git add`, then
++`gh stack rebase --continue`), `4` GitHub API failure, `7` rebase already in progress, `8` stack
++file locked (retry after ~5s), `9` stacked PRs not enabled on the repository.
++
++## PR bodies
++
++`gh stack submit` auto-generates titles and bodies. They will not match `playbooks/opening-a-pr.md`.
++Rewrite each one with `gh pr edit` after you submit.
+diff --git a/claude-code/skills/igoroh-mode/references/pr-screenshots.md b/claude-code/skills/igoroh-mode/references/pr-screenshots.md
+new file mode 100644
+index 0000000..ed5f9fc
+--- /dev/null
++++ b/claude-code/skills/igoroh-mode/references/pr-screenshots.md
+@@ -0,0 +1,23 @@
++# PR screenshots
++
++GitHub has no API to attach images. Upload each screenshot to Cloudflare R2 and put the public link in the PR body.
++
++```sh
++key="<branch>/$(openssl rand -hex 4).png"
++bunx wrangler r2 object put "github-screenshots/$key" --file=<path> --content-type=image/png --remote
++```
++
++- Public URL: `https://pub-07cc2e1863834d319b66aa5802c66ea3.r2.dev/<key>`.
++- `--remote` is necessary. Without it, wrangler writes to the local simulator.
++- The key must have the random part. The bucket is public with no listing, so a key that nobody can guess is the only protection.
++- Fetch each URL once and make sure that it returns `200` before you use it in the body.
++
++Put screenshots in a markdown table, never as bare images. Select columns that fit the change, such as Before/After or one column per screen:
++
++```
++| Before | After |
++| --- | --- |
++| ![before](https://pub-07cc2e1863834d319b66aa5802c66ea3.r2.dev/ag-51/a1b2c3d4.png) | ![after](https://pub-07cc2e1863834d319b66aa5802c66ea3.r2.dev/ag-51/e5f6a7b8.png) |
++```
++
++When the UI changes after the PR opens, take the screenshots again and replace them.
