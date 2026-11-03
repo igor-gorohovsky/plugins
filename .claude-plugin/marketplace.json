@@ -1,8 +1,7 @@
 {
-  "name": "cursor-plugins",
+  "name": "igor-plugins",
   "owner": {
-    "name": "Cursor",
-    "email": "plugins@cursor.com"
+    "name": "Igor Gorohovsky"
   },
   "plugins": [
     {
@@ -11,9 +10,9 @@
       "description": "Skills for building on the Cursor Origin API. Fetch the live spec first, then follow the Origin rules for credentials, scopes, webhooks, paging, and errors. Includes a skill that plans the port of an existing GitHub App."
     },
     {
-      "name": "pstack",
-      "source": "./harness/pstack/claude-code",
-      "description": "if you want to go fast, go deep first. pstack helps you write less, but higher quality code. rigorous agent workflows you can parallelize with confidence."
+      "name": "istack",
+      "source": "./harness/istack/claude-code",
+      "description": "if you want to go fast, go deep first. istack helps you write less, but higher quality code. rigorous agent workflows you can parallelize with confidence."
     }
   ]
 }
