@@ -89,7 +89,7 @@ morning.
 | [pause safely](./skills/igoroh-mode/playbooks/pause-safely.md) | suspend in-flight work cleanly so it can be resumed later. |
 | [multi-phase plan](./skills/igoroh-mode/playbooks/multi-phase-plan.md) | work that spans phases or stacked PRs. |
 | [worktree cleanup](./skills/igoroh-mode/playbooks/worktree-cleanup.md) | reclaim disk by pruning merged or abandoned worktrees and stale ios simulators, safety-gated. |
-| [opening a pr](./skills/igoroh-mode/playbooks/opening-a-pr.md) | open a ready pr from small ordered commits with a conventional commits title and a briefing-style body. invoked at the end of every other playbook. |
+| [opening a pr](./skills/igoroh-mode/playbooks/opening-a-pr.md) | open a draft pr from small ordered commits, with a conventional commits title that carries the ticket id and a body from the `pr` skill. invoked at the end of every other playbook. |
 
 </details>
 

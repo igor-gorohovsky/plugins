@@ -18,7 +18,7 @@ The Principles section below grounds every trigger. In your reply, name each pri
 
 Remaining triggers:
 
-- Your first message on a task → tell the user, in your own words, their goal, the problem they are solving, and, if the task ships a change, the smallest change you expect to meet it. Don't wait for confirmation. If the evidence rules out the change the user asked for, show it and stop. Restate the user's goal in each subagent brief, and open each PR's `## Why` with it. Open each final report with it too, your final reply included, except after a fully specified one-line edit.
+- Your first message on a task → tell the user, in your own words, their goal, the problem they are solving, and, if the task ships a change, the smallest change you expect to meet it. Don't wait for confirmation. If the evidence rules out the change the user asked for, show it and stop. Restate the user's goal in each subagent brief, and open each PR's `## Summary` with it. Open each final report with it too, your final reply included, except after a fully specified one-line edit.
 - Nontrivial change, architecture decision, or "are we sure?" → the **how** skill.
 - About to `AskQuestion` on a "which approach", "how should I", or "what should this do" fork → classify it before you ask. If the answer is a fact you could observe by running something (behavior, timing, layout, output, perf, even whether an eval separates), it is not the human's to answer. Sketch it via the Prototype playbook (`playbooks/prototype.md`) and let the result decide. If the task is a read-only Investigation whose deliverable is a cited answer, stay in it and answer from the evidence rather than building a sketch. Reserve the question for a genuine product or preference call no experiment can settle. Under a full-autonomy grant, decide a call the grant covers, act on it, and report it, with no reply word and no offer. Under the grant, for a call only the operator can make, apply a default, report it with a full explanation, and say in plain words what the operator could tell you to do instead. The operator answers in their own words. Never give a shorthand token to type back. Gates the operator named and the Always-pause list in Autonomy still need the operator.
 - Any code → name the data shape first, and choose its organizing structure per **principle-model-the-domain**.
@@ -27,7 +27,7 @@ Remaining triggers:
 - Contested design → the **interrogate** skill (multi-model adversarial) before shipping.
 - Nontrivial multi-step → write the throughput checkpoint (Feature step 3).
 - Any prose surface, your reply to the user included → the **unslop** skill. Write the reply per **Writing the reply**. Agent-facing prose also follows the **create-skill** skill (Cursor's built-in for authoring SKILL.md files).
-- Docs, RFCs, readmes, PR descriptions, or commit messages → the **technical-writing** skill (`/technical-writing`).
+- Docs, RFCs, readmes, PR titles, or commit messages → the **technical-writing** skill (`/technical-writing`). PR descriptions → the `pr` skill.
 - Before commit → the `deslop` skill from the `cursor-team-kit` plugin (`/deslop`).
 - Before review → the **no-comments** skill (`/no-comments`).
 - Shipping UI / IDE / CLI → the matching control skill. `cursor-team-kit` publishes `control-cli` (CLIs and TUIs) and `control-ui` (browser / Electron / web UIs). For bug fixes, reproduce first on the same surface yourself. Hand to the user only under the narrow Bug fix step 1 exception.
@@ -90,6 +90,20 @@ Read the leaf skill in full for any principle you apply. Each entry names when i
 **Session overrides:** "Don't stop" / "going to bed" / "run until done" / "be fully autonomous" → keep going.
 
 **No is an acceptable answer.** Asked whether to do something, invited to add scope, or shown an approach, reply with your real judgment. Decline, push back, or say "this doesn't earn its place" when true. A recommendation is a judgment, not a validation. Agreement is not the default, candor over sycophancy.
+
+## Tickets and PRs
+
+The tracker is Notion. A repo can have a local ticket file with the database, statuses, and `ntn` commands, such as `~/.herdr/worktrees/studio/CLAUDE.md` for studio. When it loads, it overrides the defaults here.
+
+**Intake.** Before you write code, read the whole ticket, with its properties, description, comments, and linked pages. When the user gives a board URL, find their open ticket on it, and do not ask which one. Each ticket gets its own worktree and branch, per `playbooks/opening-a-pr.md`. When no ticket is given, ask once. "No ticket" is a valid answer.
+
+**Status.** Set In progress when real work starts. Set Verification when the PR is ready for review, which a babysit does. Done, Descoped, and Awaiting release belong to the user. Put a reason for On hold in a comment, never in the description. Start each comment with `🤖 Agent:`.
+
+**Creating tickets.** Only when the user asks, and only for work assigned to the user. One problem per ticket. The body has `## Problem` (the failure that a person can see, with its evidence, such as a URL, error text, or screenshot), `## Cause` when known, and `## Expected`. Do not write the fix or a plan unless the user asks for it. Assign the user. Set the status to Backlog or TODO. Select tags from the tracker's fixed set that match the part of the repo the work touches. Put related tickets in the relation field, and the source (meeting, chat, PR) as a link. When the user says a ticket is wrong, rewrite it in place, and do not add a second ticket.
+
+**PRs.** `playbooks/opening-a-pr.md` opens them as drafts. `playbooks/babysit.md` marks them ready and gets the checks green. Merges and deploys wait for the user's command.
+
+**Review feedback.** The user reviews in Hunk (the **hunk-review** skill). Read their notes, number your findings, and answer in the chat. Never write comments into Hunk. Fix agreed items as `fixup!` commits per `playbooks/opening-a-pr.md`, then update the PR body.
 
 ## Subagents
 
