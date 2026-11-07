@@ -24,7 +24,7 @@ When the cause is unclear, ask for findings, not a fix:
 /istack:how do we dedupe notifications? is there an n+1 when we look up subscribers?
 ```
 
-Ask the question you actually have. [`/istack:how`](../../skills/how/SKILL.md) reads the code and answers at the level of a senior engineer onboarding you onto the subsystem, with the runtime flow, the key types, and the non-obvious parts. For a big subsystem it fans out two to four read-only explorer workers through the `istack:panel` workflow, then has one more worker write the explanation over their findings. For a narrow question a single worker reads and explains in one pass.
+Ask the question you actually have. [`/istack:how`](../../skills/how/SKILL.md) reads the code and answers at the level of a senior engineer onboarding you onto the subsystem, with the runtime flow, the key types, and the non-obvious parts. For a big subsystem it fans out two to four read-only explorer workers, then has one more worker write the explanation over their findings. For a narrow question a single worker reads and explains in one pass.
 
 ## Dig up history with `/istack:why`
 

@@ -108,7 +108,7 @@ If you run several workers against one repository on one computer, they will fig
 
 Each worker runs as its own terminal in Herdr. Watch the sidebar for the one that needs you, read a worker's screen with `hc read <name>`, and steer it with `hc send <name> "<text>"`. istack stops the worker once it accepts the report.
 
-A fan-out with a fixed shape runs through the `istack:panel` workflow. `/istack:swarm`, `/istack:arena`, `/istack:interrogate`, `/istack:how`, `/istack:why`, and `/istack:reflect` each fan out that way, one worker per seat in its role. `/workflows` shows the panel live while it runs.
+`/istack:swarm`, `/istack:arena`, `/istack:interrogate`, `/istack:how`, `/istack:why`, and `/istack:reflect` fan out as panels: several workers at once, one per seat, slice, or angle, then a judge or synthesizer worker over their reports when the skill needs one.
 
 When a specific base or location matters, say so up front:
 

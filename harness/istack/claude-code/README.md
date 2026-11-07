@@ -208,7 +208,7 @@ help:              /igoroh-help which skill should i use to review this branch?
 
 every subagent is a worker: an interactive claude code, pi, or codex session in its own herdr terminal, started by [`istack-worker`](./scripts/istack-worker) from a role in `~/.claude/rules/istack-models.md`. a code delegate's brief points it at `igoroh-mode`, so it reads the principles before it writes code. workers that read slack, notion, meetings, or session transcripts run on claude code, because that data stays on claude.
 
-fixed-shape fan-outs (`/swarm`, `/arena`, `/interrogate`, `/how`, `/why`, `/reflect`) run through the [`istack:panel`](./workflows/panel.js) workflow. it starts the workers, retries one that ends without a report, and then reruns findings, picks a judge from another model family, or synthesizes the reports. `/workflows` shows it live.
+fan-outs (`/swarm`, `/arena`, `/interrogate`, `/how`, `/why`, `/reflect`) run as panels: the chat starts several workers at once, retries one that ends without a report, and then reruns their findings, starts a judge from another model family, or starts a synthesizer over the reports. you watch every worker in herdr's sidebar.
 
 [Comment Sicko](./skills/no-comments/references/comment-sicko.md) is a comment reviewer that [`/no-comments`](./skills/no-comments/SKILL.md) runs as a worker, then audits its findings.
 

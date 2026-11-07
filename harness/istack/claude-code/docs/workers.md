@@ -25,18 +25,12 @@ A follow-up or retry goes to a fresh worker whose brief carries the original bri
 
 ## Panels
 
-A fan-out with a fixed shape runs through the `istack:panel` workflow. A skill that says "run a panel" authorizes the Workflow tool call. Call it with `name: "istack:panel"` and these `args`:
+A panel is several workers on one task shape, such as one per seat, slice, or angle, then optionally a judge or a synthesizer over their reports. Run it with the steps above:
 
-| Arg | Value |
-| --- | --- |
-| `dir` | `~/.cache/istack/runs/<skill>-<slug>`. Create it. Each worker's report lands at `<dir>/<name>.md`. |
-| `cwd` | The default working directory for workers. |
-| `roles` | The JSON object that `istack-worker roles --json` prints. |
-| `workers` | `[{name, role, seat?, cwd?, brief? or briefText?, effort?, claude?}]`. Names are unique, lowercase, and 32 characters at most. |
-| `verify` | Optional. `{instructions}`. Each report's findings are rerun in its worker's `cwd`, and only reproduced ones are kept. |
-| `judge` | Optional. `{role, briefText}`. One judge from the first seat of another family than `parentFamily` (default `claude`). |
-| `synthesize` | Optional. `{role, briefText, claude?}`. One synthesizer over every report. |
-
-The judge and the synthesizer get the report paths appended to their `briefText`. A Claude seat runs them as workflow agents, and any other seat runs them as workers. The workflow retries each worker once when it ends without a report. It returns `{workers, gaps, findings, judge, synthesis}` with report paths. Read the files you need.
-
-When the Workflow tool is missing, or `istack:panel` is not found, do the same steps yourself: start each worker, wait for all of them, then start the judge or synthesizer as one more worker. Say so in your reply.
+1. Make a run folder, `~/.cache/istack/runs/<skill>-<slug>`. Each worker's brief and report go to `<dir>/<name>.brief.md` and `<dir>/<name>.md`.
+2. Start every worker before you wait on any. Names are unique, lowercase, and at most 32 characters.
+3. Wait on each worker in turn. Retry a worker once, as a fresh worker, when it ends `no-report` or `exited`. A worker still without a report is a gap, and your reply names it.
+4. **Verify**, when the skill asks for it. For each report, rerun every finding's command in that worker's `--cwd`. Keep a finding only when the output you see shows the failure and the failure breaks the stated intent.
+5. **Judge**, when the skill asks for it. Start one more worker on the judge role, at the first seat whose family differs from yours. When you run on Claude, that is the first pi or Codex seat. When every seat is your family, skip the judge and say so. Its brief lists the report paths and the gaps.
+6. **Synthesize**, when the skill asks for it. Start one more worker on the synthesizer role. Its brief lists the report paths and the gaps.
+7. Stop every worker once you accept its report.

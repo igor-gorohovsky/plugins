@@ -24,7 +24,7 @@ The newest file is usually this session. Confirm by finding the conversation's o
 
 ## 2. Run three reviewers and a synthesizer
 
-Run a panel with three reviewers, all with `claude: true`. They read the session transcript, which stays on Claude, and they need the MCP servers to look up the tickets, chat threads, and traces the transcript references.
+Run a panel with three reviewers, all with `--claude`. They read the session transcript, which stays on Claude, and they need the MCP servers to look up the tickets, chat threads, and traces the transcript references.
 
 | Lens | Role | Prompt template |
 |---|---|---|
@@ -36,7 +36,7 @@ Each brief is its template verbatim, with the transcript path or digest substitu
 
 ## 3. Synthesize
 
-In the same panel, set `synthesize` to the `reflect synthesizer` role with `claude: true` and a `briefText` that points to `references/synthesizer.md`. The panel appends the reviewers' report paths. It returns an Accepted / Rejected / Backlog list.
+Once every reviewer has reported, start one worker on the `reflect synthesizer` role with `--claude`. Its brief points to `references/synthesizer.md` and lists the reviewers' report paths. It returns an Accepted / Rejected / Backlog list.
 
 ## 4. Structural enforcement check
 

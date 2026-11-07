@@ -26,11 +26,11 @@ Open a todolist with one entry per phase before launching anything.
 
 ## Phase B: Fan out
 
-Run a panel with one worker per slice or arm and no `verify`, `judge`, or `synthesize`. When a worker must start from a branch, its worktree checks out that branch.
+Run a panel with one worker per slice or arm, with no verify, judge, or synthesize step. When a worker must start from a branch, its worktree checks out that branch.
 
 Every brief stands alone. Include the goal, scope, exact slice or race arm, how to verify, and what to report. Reports use `PASS`, `ISSUES`, or `BLOCKED` with evidence. A worker that can prove a defect reports `ISSUES` and lists every issue it can prove, not only the first.
 
-The panel retries a worker once. A worker still in `gaps` is a dropout. Proceed with N-1 and note it.
+A worker still without a report after its retry is a dropout. Proceed with N-1 and note it.
 
 ## Phase C: Aggregate
 

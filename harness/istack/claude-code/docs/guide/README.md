@@ -17,7 +17,7 @@ Here's what you'll learn:
 
 Read the pages in order the first time. After that, each page stands alone.
 
-Every istack skill takes the plugin prefix, so you type `/istack:igoroh-mode` and not `/igoroh-mode`. Claude Code built-ins, such as `/loop`, `/simplify`, and `/workflows`, keep their own names.
+Every istack skill takes the plugin prefix, so you type `/istack:igoroh-mode` and not `/igoroh-mode`. Claude Code built-ins, such as `/loop` and `/simplify`, keep their own names.
 
 When you're stuck, or can't tell which skill fits, type [`/istack:igoroh-help`](../../skills/igoroh-help/SKILL.md) with your question:
 

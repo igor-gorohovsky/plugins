@@ -28,7 +28,7 @@ Right after a task that taught you something, run:
 /istack:reflect that took way too long. capture what we learned so the next run doesn't repeat it.
 ```
 
-[`/istack:reflect`](../../skills/reflect/SKILL.md) runs the `istack:panel` workflow over the transcript, with three reviewers and a synthesizer. The synthesizer sorts the proposals into `Accepted`, `Rejected`, and `Backlog`. Nothing changes until you approve. `/workflows` shows the panel while it runs. Approve a proposal only if it would change a future decision. One weird session is an anecdote, not a rule.
+[`/istack:reflect`](../../skills/reflect/SKILL.md) runs three reviewer workers over the transcript, then a synthesizer worker over their reports. The synthesizer sorts the proposals into `Accepted`, `Rejected`, and `Backlog`. Nothing changes until you approve. Approve a proposal only if it would change a future decision. One weird session is an anecdote, not a rule.
 
 ## Fix the environment with `/istack:correct`
 

@@ -51,7 +51,7 @@ istack spends extra tokens on workers and review panels. That's the price of the
 
 - Rerun `/istack:setup-istack` and pick a smaller reasoning budget, or cheaper seats such as a pi seat on a cheap model. A strong model in the main chat with cheaper, faster workers in the code roles is a good split.
 - Set a role to `inherit-parent` so it runs on the chat's own model.
-- Shorten a panel list. Each seat runs one worker, and a panel also spends one short Haiku relay agent per worker.
+- Shorten a panel list. Each seat runs one worker.
 - Save `/istack:igoroh-mode` for work that needs rigor. A small, obvious edit doesn't.
 
 ## Run your first task

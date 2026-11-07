@@ -87,16 +87,6 @@ class RoleTableTest(unittest.TestCase):
         self.assertEqual(len(worker.convert_to_terminal_name("x" * 50)), 32)
 
 
-class RolesJsonTest(unittest.TestCase):
-    def test_json_names_every_part_of_a_comma_role(self):
-        completed = subprocess.run([sys.executable, str(SCRIPT), "roles", "--json"], capture_output=True, text=True,
-                                   env={**os.environ, "ISTACK_MODELS_RULE": "/nonexistent"})
-        roles = json.loads(completed.stdout)
-        for name in ("reflect synthesizer", "reflect judgment", "reflect divergent", "feature", "refactoring", "how explainer"):
-            self.assertIn(name, roles)
-        self.assertEqual(roles["reflect synthesizer"]["seats"][0]["model"], "opus")
-
-
 class WorkerLifecycleTest(unittest.TestCase):
     def setUp(self):
         self.directory = tempfile.TemporaryDirectory()
@@ -124,30 +114,37 @@ class WorkerLifecycleTest(unittest.TestCase):
     def hc_calls(self):
         return [json.loads(line) for line in self.log.read_text().splitlines()]
 
-    def start_arguments(self, command="run"):
-        return [command, "--role", "swarm workers", "--name", "Swarm 1", "--cwd", self.directory.name,
-                "--brief", str(self.brief), "--report", str(self.report), "--quiet"]
+    def start_arguments(self):
+        return ["start", "--role", "swarm workers", "--name", "Swarm 1", "--cwd", self.directory.name,
+                "--brief", str(self.brief), "--report", str(self.report)]
 
-    def test_run_starts_the_role_command_and_returns_the_report_once_done(self):
-        code, result = self.run_worker(self.start_arguments(), [
+    def run_and_wait(self, arguments, waits):
+        code, started = self.run_worker(arguments, waits)
+        self.assertEqual(code, 0, started)
+        return self.run_worker(["wait", "--name", started["name"], "--report", str(self.report)], waits)
+
+    def test_start_runs_the_role_command_and_wait_returns_the_report_once_done(self):
+        code, result = self.run_and_wait(self.start_arguments(), [
             {"json": {"reason": "timeout", "status": "working"}},
             {"json": {"reason": "status", "status": "done", "turn": 1}, "write_report": True},
         ])
         self.assertEqual(code, 0)
         self.assertEqual((result["status"], result["name"], result["report_exists"]), ("done", "swarm-1", True))
         run_call = self.hc_calls()[0]
-        self.assertIn("--no-notify", run_call)
         self.assertEqual(run_call[run_call.index("--") + 1:run_call.index("--") + 5], ["pi", "--model", "p/deepseek-v4", "--thinking"])
         self.assertIn(str(self.brief), run_call[-1])
-        self.assertEqual([call[0] for call in self.hc_calls()[-2:]], ["kill", "rm"])
 
     def test_done_without_a_report_is_reported_with_the_screen_tail(self):
-        code, result = self.run_worker(self.start_arguments(), [{"json": {"reason": "status", "status": "done", "turn": 1}}])
+        code, result = self.run_and_wait(self.start_arguments(), [{"json": {"reason": "status", "status": "done", "turn": 1}}])
         self.assertEqual((result["status"], result["tail"]), ("no-report", "screen tail"))
-        self.assertNotIn("kill", [call[0] for call in self.hc_calls()])
+
+    def test_stop_kills_and_removes_each_worker(self):
+        code, result = self.run_worker(["stop", "swarm-1", "swarm-2"], [])
+        self.assertEqual([call[0] for call in self.hc_calls()], ["kill", "rm", "kill", "rm"])
+        self.assertEqual([entry["name"] for entry in result], ["swarm-1", "swarm-2"])
 
     def test_startup_idle_keeps_waiting(self):
-        code, result = self.run_worker(self.start_arguments(), [
+        code, result = self.run_and_wait(self.start_arguments(), [
             {"json": {"reason": "status", "status": "idle", "turn": 0}},
             {"json": {"reason": "status", "status": "blocked", "turn": 1}, "code": 9},
         ])
@@ -155,14 +152,14 @@ class WorkerLifecycleTest(unittest.TestCase):
         self.assertEqual(sum(1 for call in self.hc_calls() if call[0] == "wait"), 2)
 
     def test_a_finished_terminal_counts_as_exited(self):
-        code, result = self.run_worker(self.start_arguments(), [{"json": {"error": {"kind": "finished"}}, "code": 11}])
+        code, result = self.run_and_wait(self.start_arguments(), [{"json": {"error": {"kind": "finished"}}, "code": 11}])
         self.assertEqual(result["status"], "exited")
 
     def test_brief_text_is_saved_beside_the_report(self):
         arguments = [argument for argument in self.start_arguments() if argument != str(self.brief)]
         arguments[arguments.index("--brief")] = "--brief-text"
         arguments.insert(arguments.index("--brief-text") + 1, "judge the candidates")
-        code, result = self.run_worker(arguments, [{"json": {"reason": "status", "status": "done", "turn": 1}, "write_report": True}])
+        code, result = self.run_and_wait(arguments, [{"json": {"reason": "status", "status": "done", "turn": 1}, "write_report": True}])
         brief_path = self.report.with_name("report.brief.md")
         self.assertEqual((code, brief_path.read_text()), (0, "judge the candidates"))
         self.assertIn(str(brief_path), self.hc_calls()[0][-1])
@@ -177,7 +174,7 @@ class WorkerLifecycleTest(unittest.TestCase):
     def test_start_refuses_outside_herdr(self):
         environment = {**os.environ, "ISTACK_HC": str(self.hc), "ISTACK_MODELS_RULE": str(self.rule)}
         environment.pop("HC_TERMINAL_ID", None)
-        completed = subprocess.run([sys.executable, str(SCRIPT), *self.start_arguments("start")],
+        completed = subprocess.run([sys.executable, str(SCRIPT), *self.start_arguments()],
                                    capture_output=True, text=True, env=environment)
         self.assertEqual(completed.returncode, 2)
         self.assertIn("HC_TERMINAL_ID", completed.stderr)

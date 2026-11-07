@@ -102,7 +102,7 @@ A few habits help:
 - Give each body of work its own tab, such as a feature, a migration, a perf push, or a tech-debt cleanup. Several can run side by side.
 - Start every task in a tab with `/istack:igoroh-mode`, so the workers it starts follow the playbooks.
 - When a worker needs what an earlier chat knew, put that transcript's path in its brief, `~/.claude/projects/<slug>/<session>.jsonl`, and start it with `--claude`.
-- Give each PR a verification swarm before it merges, and let Autopilot-stack or Autopilot-full carry the queue. The swarm runs through the `istack:panel` workflow, one worker per slice.
+- Give each PR a verification swarm before it merges, and let Autopilot-stack or Autopilot-full carry the queue. The swarm starts one worker per slice.
 - Ask the coordinator for a plan backed by data, and have it answer open questions with prototypes before it asks you.
 
 One prompt can carry a whole program, from research through execution:

@@ -27,7 +27,7 @@ Decompose the question into 2 to 4 angles, each a distinct slice of the subsyste
 
 ## 3. Synthesize (complex only)
 
-In the same panel, set `synthesize` to the `how explainer` role, with a `briefText` that points to `references/explainer-prompt.md` and carries the question. The panel appends the explorers' report paths.
+Once every explorer has reported, start one worker on the `how explainer` role. Its brief points to `references/explainer-prompt.md` and carries the question and the explorers' report paths.
 
 ## 4. Present
 

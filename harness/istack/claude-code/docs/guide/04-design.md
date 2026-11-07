@@ -4,7 +4,7 @@ One attempt at a hard design locks in the first shape the model thought of. `/is
 
 The two most common design mistakes are taking the agent's first design and polishing a plan that no code has tested. This page fixes both. You plan through code. Prototypes answer the open questions, a README or tutorial sets the target, and the written plan comes last.
 
-Every fan-out on this page runs the same way. Each worker is an agent in its own Herdr terminal, started through the `istack:panel` workflow and shown live in `/workflows`. One worker per seat of the role, so a mixed panel means mixed model families. You watch them in Herdr's sidebar and steer one with `hc send <name> "<text>"`. The [workers doc](../../docs/workers.md) has the mechanics.
+Every fan-out on this page runs the same way. Each worker is an agent in its own Herdr terminal, started by `istack-worker`. One worker per seat of the role, so a mixed panel means mixed model families. You watch them in Herdr's sidebar and steer one with `hc send <name> "<text>"`. The [workers doc](../../docs/workers.md) has the mechanics.
 
 ![Three robots draft competing bridge models at their own tables under /architect, /arena, and /interrogate panels, while a judge robot with a clipboard inspects skeptically.](./images/design.jpg)
 
@@ -34,7 +34,7 @@ The design isn't sacred once code starts. If implementation shows the same worka
 
 ```mermaid
 flowchart LR
-    A[One task] --> B[istack:panel fan-out]
+    A[One task] --> B[Fan out workers]
     B --> C[Candidate 1]
     B --> D[Candidate 2]
     B --> E[Candidate N]

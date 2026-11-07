@@ -23,9 +23,9 @@ Every candidate gets the same prompt, so the prompt is the contract.
 
 Run a panel with one worker per candidate. Each brief carries the task, the path to the shared grounding, the candidate's own output path, and instructions to produce the artifact and a short rationale naming the alternatives it considered and what it rejected. Write the rubric to `<dir>/rubric.md`.
 
-Set `judge` to the `arena cross-judge pool` role with this `briefText`: score each candidate against the rubric at `<dir>/rubric.md` criterion by criterion, and recommend a base with a rationale. The panel picks the first seat whose family differs from yours, so the judge never shares the picker's bias. When every seat is your family, the panel skips the judge. Pick the base alone in Phase C and say so.
+Then start a judge on the `arena cross-judge pool` role with this brief: score each candidate against the rubric at `<dir>/rubric.md` criterion by criterion, and recommend a base with a rationale. The judge runs at the first seat whose family differs from yours, so it never shares the picker's bias. When every seat is your family, skip the judge. Pick the base alone in Phase C and say so.
 
-A candidate in `gaps` is a dropout. Proceed with N-1 and note it.
+A candidate still without a report after its retry is a dropout. Proceed with N-1 and note it.
 
 ## Phase C: Pick a base
 

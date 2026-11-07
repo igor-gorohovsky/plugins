@@ -151,7 +151,7 @@ def write_brief(brief, brief_text, report_path):
     return brief_path
 
 
-def start_worker(role, seat, name, cwd, brief, report, quiet, effort, brief_text=None, claude=False):
+def start_worker(role, seat, name, cwd, brief, report, effort, brief_text=None, claude=False):
     entries = resolve_role(role)
     if seat >= len(entries):
         raise WorkerError(f"role '{role}' has {len(entries)} seat(s); seat {seat} does not exist")
@@ -169,8 +169,6 @@ def start_worker(role, seat, name, cwd, brief, report, quiet, effort, brief_text
     command = build_command(entry, effort) + [compose_first_message(brief_path, report_path)]
     terminal_name = convert_to_terminal_name(name)
     arguments = ["run", "--bg", "--json", "--name", terminal_name, "--cwd", str(Path(cwd).resolve())]
-    if quiet:
-        arguments.append("--no-notify")
     code, result = run_hc(arguments + ["--", *command])
     if code != 0 or "address" not in result:
         raise WorkerError(f"hc run failed for {terminal_name}: {json.dumps(result)}")
@@ -217,55 +215,27 @@ def stop_workers(names):
     return stopped
 
 
-def expand_role_names(rows):
-    names = {}
-    for label, row in rows.items():
-        parts = [part.strip() for part in label.split(",")]
-        prefix = parts[0].split()[0]
-        for part in parts[1:]:
-            names[part] = row
-            names[f"{prefix} {part}"] = row
-        if len(parts) > 1:
-            names[parts[0]] = row
-    return names
-
-
-def print_roles(as_json):
-    table = read_role_table()
-    rows = {}
-    for label, row in table.items():
+def print_roles():
+    for label, row in read_role_table().items():
         entries = [parse_entry(entry.strip()) for entry in row["value"].split(",") if entry.strip()]
-        rows[label] = {"source": row["source"],
-                       "seats": [{**entry, "command": build_command(entry)} for entry in entries]}
-    if as_json:
-        print(json.dumps({**expand_role_names(rows), **rows}, indent=2))
-        return
-    for label, row in rows.items():
-        seats = "; ".join(" ".join(seat["command"]) for seat in row["seats"])
-        print(f"{label}: {seats}")
+        print(f"{label}: " + "; ".join(" ".join(build_command(entry)) for entry in entries))
 
 
 def parse_arguments(argv):
     parser = argparse.ArgumentParser(prog="istack-worker", description=__doc__.splitlines()[0])
     commands = parser.add_subparsers(dest="command", required=True)
-    roles = commands.add_parser("roles", help="print each role's seats and the command each seat runs")
-    roles.add_argument("--json", action="store_true")
-    for command in ("start", "run"):
-        sub = commands.add_parser(command, help="start a worker" if command == "start" else "start a worker and wait for it")
-        sub.add_argument("--role", required=True)
-        sub.add_argument("--seat", type=int, default=0, help="which entry of a panel role, from 0")
-        sub.add_argument("--name", required=True, help="terminal name, unique among live terminals")
-        sub.add_argument("--cwd", required=True)
-        sub.add_argument("--brief", help="file holding the worker's task")
-        sub.add_argument("--brief-text", help="the worker's task as text, saved beside the report")
-        sub.add_argument("--claude", action="store_true",
-                         help="run on Claude Code even when the seat is another harness (MCP data, transcripts)")
-        sub.add_argument("--report", required=True, help="file the worker writes its final report to")
-        sub.add_argument("--effort", choices=EFFORTS, help="override the role's effort for this worker")
-        sub.add_argument("--quiet", action="store_true", help="send no hc notes to the parent terminal")
-        if command == "run":
-            sub.add_argument("--max-seconds", type=int, default=540)
-            sub.add_argument("--keep", action="store_true", help="leave the worker running after it reports")
+    commands.add_parser("roles", help="print each role's seats and the command each seat runs")
+    start = commands.add_parser("start", help="start a worker")
+    start.add_argument("--role", required=True)
+    start.add_argument("--seat", type=int, default=0, help="which entry of a panel role, from 0")
+    start.add_argument("--name", required=True, help="terminal name, unique among live terminals")
+    start.add_argument("--cwd", required=True)
+    start.add_argument("--brief", help="file holding the worker's task")
+    start.add_argument("--brief-text", help="the worker's task as text, saved beside the report")
+    start.add_argument("--claude", action="store_true",
+                       help="run on Claude Code even when the seat is another harness (MCP data, transcripts)")
+    start.add_argument("--report", required=True, help="file the worker writes its final report to")
+    start.add_argument("--effort", choices=EFFORTS, help="override the role's effort for this worker")
     wait = commands.add_parser("wait", help="wait until a worker finishes its turn, then check its report")
     wait.add_argument("--name", required=True)
     wait.add_argument("--report", required=True)
@@ -279,7 +249,7 @@ def main(argv):
     arguments = parse_arguments(argv)
     try:
         if arguments.command == "roles":
-            print_roles(arguments.json)
+            print_roles()
             return 0
         if arguments.command == "stop":
             result = stop_workers(arguments.names)
@@ -287,12 +257,7 @@ def main(argv):
             result = wait_for_worker(arguments.name, arguments.report, arguments.max_seconds)
         else:
             result = start_worker(arguments.role, arguments.seat, arguments.name, arguments.cwd, arguments.brief,
-                                  arguments.report, arguments.quiet, arguments.effort, arguments.brief_text,
-                                  arguments.claude)
-            if arguments.command == "run":
-                result = {**result, **wait_for_worker(result["name"], result["report"], arguments.max_seconds)}
-                if result["status"] == "done" and not arguments.keep:
-                    stop_workers([result["name"]])
+                                  arguments.report, arguments.effort, arguments.brief_text, arguments.claude)
     except WorkerError as error:
         print(json.dumps({"error": str(error)}), file=sys.stderr)
         return 2

@@ -10,7 +10,7 @@ Workers run per [the workers doc](../../docs/workers.md). Read it once per sessi
 
 Investigate the motivation and intent behind code. The companion `how` skill answers what the code does and how it works. `why` answers what forces led to its shape.
 
-Investigators run on the `why investigators` role and the synthesizer on the `why synthesizer` role. Every worker that queries an MCP server runs with `claude: true`, because only Claude Code workers have the MCP servers. The synthesizer runs with `claude: true` too, so it can spot-check citations. Investigators write nothing but their report.
+Investigators run on the `why investigators` role and the synthesizer on the `why synthesizer` role. Every worker that queries an MCP server runs with `--claude`, because only Claude Code workers have the MCP servers. The synthesizer runs with `--claude` too, so it can spot-check citations. Investigators write nothing but their report.
 
 ## Operating Posture
 
@@ -76,8 +76,8 @@ If your scope assessment suggests a single-commit trivial target where the PR de
 
 ## Step 4. Synthesize
 
-In the same panel, set `synthesize` to the `why synthesizer` role with `claude: true`. Its `briefText` carries:
-1. Any categories skipped with justification. The panel appends the investigators' report paths.
+Once every investigator has reported, start one worker on the `why synthesizer` role with `--claude`. Its brief carries:
+1. The investigators' report paths, and any categories skipped with justification
 2. The code anchor
 3. The user's original question
 4. The epistemics framework from `references/epistemics.md`

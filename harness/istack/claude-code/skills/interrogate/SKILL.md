@@ -18,13 +18,13 @@ The scope is what the user names. Otherwise it is the branch diff from its merge
 
 Give each seat of the `interrogate reviewers` role its own git worktree at the scope's head, with the scope's uncommitted changes copied in. Write the intent to `<dir>/intent.md`.
 
-Run a panel with one worker per seat, each with `cwd` set to its worktree, and `verify` set to `{instructions: "the intent is in <dir>/intent.md"}`. Each worker's brief carries the scope, the intent, and this:
+Run a panel with one worker per seat, each with its worktree as `--cwd`, and verify its findings against the intent in `<dir>/intent.md`. Each worker's brief carries the scope, the intent, and this:
 
 > Break this change. Prove each finding with a run against the real code, such as a failing test, a repro script, or command output that shows the wrong behavior. For a design or plan, run a prototype or probe the current tree. Keep repros in your own worktree. Report each finding with a title, the exact command, the output it printed, and the output the intent requires. Leave out anything you did not run. That covers style, naming, structure, and risks that need a future change to matter. No findings is a valid result.
 
 ## Verify
 
-The panel reruns every finding in its adversary's worktree and returns the reproduced ones in `findings`. Rerun any finding whose verdict you doubt yourself. Merge findings that share a root cause. Adversaries find different failures, so the verdict keeps every verified finding, not one adversary's list.
+Rerun every finding in its adversary's worktree, and keep only the ones that reproduce. Merge findings that share a root cause. Adversaries find different failures, so the verdict keeps every verified finding, not one adversary's list.
 
 ## Output
 
