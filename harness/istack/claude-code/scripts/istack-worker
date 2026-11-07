@@ -1,0 +1,291 @@
+#!/usr/bin/env python3
+"""Start istack workers as Herdr terminals, one per role seat, and collect their reports.
+
+The role table lives in ~/.claude/rules/istack-models.md, one `role: entry, entry` line per role.
+An entry is `<claude-model> <effort>`, `pi <provider/model> <effort>`, `codex <model> <effort>`,
+or `inherit-parent` / `auto` (Claude Code on its default model).
+"""
+
+import argparse
+import json
+import os
+import re
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+RULE_PATH = Path(os.environ.get("ISTACK_MODELS_RULE", "~/.claude/rules/istack-models.md")).expanduser()
+HC = os.environ.get("ISTACK_HC", "hc")
+EFFORTS = ("low", "medium", "high", "xhigh", "max")
+CLAUDE_MODELS = ("opus", "sonnet", "haiku", "fable")
+PARENT_ALIASES = ("inherit-parent", "auto")
+WAIT_SLICE_SECONDS = 170
+STARTUP_POLL_SECONDS = float(os.environ.get("ISTACK_STARTUP_POLL_SECONDS", "2"))
+DEFAULT_ROLES = {
+    "feature, refactoring": "sonnet high",
+    "bug-fix": "sonnet high",
+    "perf-issue": "sonnet high",
+    "hillclimb": "sonnet high",
+    "judgment and prose": "opus high",
+    "hardest tasks": "opus high",
+    "how explorer": "sonnet high",
+    "how explainer": "opus high",
+    "why investigators": "sonnet high",
+    "why synthesizer": "opus high",
+    "reflect tooling": "sonnet high",
+    "reflect judgment, divergent, synthesizer": "opus high",
+    "arena runners": "opus high, sonnet high",
+    "arena cross-judge pool": "opus high",
+    "swarm workers": "sonnet high",
+    "architect runners": "opus high, sonnet high",
+    "interrogate reviewers": "opus high, sonnet high",
+}
+
+
+class WorkerError(Exception):
+    pass
+
+
+def parse_entry(text):
+    tokens = text.split()
+    if len(tokens) == 1 and tokens[0] in PARENT_ALIASES:
+        return {"spec": text, "harness": "claude", "model": None, "effort": None, "family": "claude"}
+    if len(tokens) == 3 and tokens[0] in ("pi", "codex") and tokens[2] in EFFORTS:
+        model = tokens[1]
+        family = re.split(r"[-:.0-9]", model.split("/")[-1], maxsplit=1)[0] or model
+        return {"spec": text, "harness": tokens[0], "model": model, "effort": tokens[2], "family": family}
+    if len(tokens) == 2 and tokens[0] in CLAUDE_MODELS and tokens[1] in EFFORTS:
+        return {"spec": text, "harness": "claude", "model": tokens[0], "effort": tokens[1], "family": "claude"}
+    raise WorkerError(f"cannot read role entry '{text}': use '<opus|sonnet|haiku|fable> <effort>', "
+                      f"'pi <provider/model> <effort>', 'codex <model> <effort>' or inherit-parent")
+
+
+def parse_role_lines(text):
+    roles = {}
+    for line in text.splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#") or stripped == "---" or ":" not in stripped:
+            continue
+        label, value = stripped.split(":", 1)
+        if label.strip() in ("description", "alwaysApply"):
+            continue
+        roles[label.strip()] = value.strip()
+    return roles
+
+
+def read_role_table():
+    table = {label: {"value": value, "source": "default"} for label, value in DEFAULT_ROLES.items()}
+    if RULE_PATH.exists():
+        for label, value in parse_role_lines(RULE_PATH.read_text()).items():
+            table[label] = {"value": value, "source": str(RULE_PATH)}
+    return table
+
+
+def find_role(table, role):
+    if role in table:
+        return table[role]
+    for label, row in table.items():
+        parts = [part.strip() for part in label.split(",")]
+        if role in parts or any(f"{parts[0].split()[0]} {part}" == role for part in parts[1:]):
+            return row
+    raise WorkerError(f"no line for role '{role}' in {RULE_PATH}; known roles: {', '.join(table)}")
+
+
+def resolve_role(role):
+    row = find_role(read_role_table(), role)
+    return [parse_entry(entry.strip()) for entry in row["value"].split(",") if entry.strip()]
+
+
+def build_command(entry, effort=None):
+    effort = effort or entry["effort"]
+    if entry["harness"] == "pi":
+        return ["pi", "--model", entry["model"], "--thinking", effort]
+    if entry["harness"] == "codex":
+        codex_effort = "xhigh" if effort == "max" else effort
+        return ["codex", "-m", entry["model"], "-c", f"model_reasoning_effort={codex_effort}"]
+    command = ["claude"]
+    if entry["model"]:
+        command += ["--model", entry["model"]]
+    if effort:
+        command += ["--effort", effort]
+    return command
+
+
+def convert_to_terminal_name(text):
+    name = re.sub(r"[^a-z0-9_-]+", "-", text.lower()).strip("-")[:32]
+    if not name:
+        raise WorkerError(f"'{text}' has no usable characters for a terminal name")
+    return name
+
+
+def compose_first_message(brief, report):
+    return (f"You are an istack worker. Read your brief at {brief} and do that work, inside its scope. "
+            f"When the work is done, write your complete final report to {report} in one write, then end your turn. "
+            f"Start other agents only when the brief assigns it.")
+
+
+def run_hc(arguments):
+    completed = subprocess.run([HC, *arguments], capture_output=True, text=True)
+    output = completed.stdout.strip() or completed.stderr.strip()
+    try:
+        return completed.returncode, json.loads(output) if output else {}
+    except json.JSONDecodeError:
+        return completed.returncode, {"text": output}
+
+
+def choose_claude_entry(entry):
+    if entry["harness"] == "claude":
+        return entry
+    for seat in resolve_role("judgment and prose"):
+        if seat["harness"] == "claude":
+            return {**seat, "effort": entry["effort"]}
+    return parse_entry(f"opus {entry['effort']}")
+
+
+def write_brief(brief, brief_text, report_path):
+    if brief_text is None:
+        return Path(brief).resolve()
+    brief_path = report_path.with_name(report_path.stem + ".brief.md")
+    brief_path.write_text(brief_text)
+    return brief_path
+
+
+def start_worker(role, seat, name, cwd, brief, report, quiet, effort, brief_text=None, claude=False):
+    entries = resolve_role(role)
+    if seat >= len(entries):
+        raise WorkerError(f"role '{role}' has {len(entries)} seat(s); seat {seat} does not exist")
+    if not os.environ.get("HC_TERMINAL_ID"):
+        raise WorkerError("HC_TERMINAL_ID is unset: this session is not inside Herdr, so no worker can start")
+    if (brief is None) == (brief_text is None):
+        raise WorkerError("give exactly one of --brief and --brief-text")
+    report_path = Path(report).resolve()
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    report_path.unlink(missing_ok=True)
+    brief_path = write_brief(brief, brief_text, report_path)
+    if not brief_path.exists():
+        raise WorkerError(f"brief {brief_path} does not exist")
+    entry = choose_claude_entry(entries[seat]) if claude else entries[seat]
+    command = build_command(entry, effort) + [compose_first_message(brief_path, report_path)]
+    terminal_name = convert_to_terminal_name(name)
+    arguments = ["run", "--bg", "--json", "--name", terminal_name, "--cwd", str(Path(cwd).resolve())]
+    if quiet:
+        arguments.append("--no-notify")
+    code, result = run_hc(arguments + ["--", *command])
+    if code != 0 or "address" not in result:
+        raise WorkerError(f"hc run failed for {terminal_name}: {json.dumps(result)}")
+    return {"name": terminal_name, "terminal": result["address"], "spec": entry["spec"],
+            "family": entry["family"], "report": str(report_path)}
+
+
+def describe_outcome(name, report, status):
+    report_path = Path(report).resolve()
+    outcome = {"name": name, "status": status, "report": str(report_path), "report_exists": report_path.exists()}
+    if status == "done" and not outcome["report_exists"]:
+        outcome["status"] = "no-report"
+    if outcome["status"] != "done":
+        code, screen = run_hc(["read", name, "--lines", "40"])
+        outcome["tail"] = screen.get("text", json.dumps(screen))[-3000:]
+    return outcome
+
+
+def wait_for_worker(name, report, max_seconds):
+    deadline = time.monotonic() + max_seconds
+    while True:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            return {"name": name, "status": "working", "report": str(Path(report).resolve()), "report_exists": False}
+        code, result = run_hc(["wait", name, "--json", "--timeout", str(max(1, min(WAIT_SLICE_SECONDS, int(remaining))))])
+        error = result.get("error", {})
+        if error.get("kind") == "finished" or result.get("reason") == "exit":
+            return describe_outcome(name, report, "exited")
+        if error:
+            raise WorkerError(f"hc wait {name} failed: {json.dumps(error)}")
+        if result.get("status") == "idle" and not result.get("turn") and not Path(report).exists():
+            time.sleep(STARTUP_POLL_SECONDS)
+            continue
+        if result.get("reason") == "status" and result.get("status") in ("done", "blocked", "error", "idle"):
+            return describe_outcome(name, report, "done" if result["status"] == "idle" else result["status"])
+
+
+def stop_workers(names):
+    stopped = []
+    for name in names:
+        run_hc(["kill", name])
+        code, result = run_hc(["rm", name])
+        stopped.append({"name": name, "removed": code == 0})
+    return stopped
+
+
+def print_roles(as_json):
+    table = read_role_table()
+    rows = {}
+    for label, row in table.items():
+        entries = [parse_entry(entry.strip()) for entry in row["value"].split(",") if entry.strip()]
+        rows[label] = {"source": row["source"],
+                       "seats": [{**entry, "command": build_command(entry)} for entry in entries]}
+    if as_json:
+        print(json.dumps(rows, indent=2))
+        return
+    for label, row in rows.items():
+        seats = "; ".join(" ".join(seat["command"]) for seat in row["seats"])
+        print(f"{label}: {seats}")
+
+
+def parse_arguments(argv):
+    parser = argparse.ArgumentParser(prog="istack-worker", description=__doc__.splitlines()[0])
+    commands = parser.add_subparsers(dest="command", required=True)
+    roles = commands.add_parser("roles", help="print each role's seats and the command each seat runs")
+    roles.add_argument("--json", action="store_true")
+    for command in ("start", "run"):
+        sub = commands.add_parser(command, help="start a worker" if command == "start" else "start a worker and wait for it")
+        sub.add_argument("--role", required=True)
+        sub.add_argument("--seat", type=int, default=0, help="which entry of a panel role, from 0")
+        sub.add_argument("--name", required=True, help="terminal name, unique among live terminals")
+        sub.add_argument("--cwd", required=True)
+        sub.add_argument("--brief", help="file holding the worker's task")
+        sub.add_argument("--brief-text", help="the worker's task as text, saved beside the report")
+        sub.add_argument("--claude", action="store_true",
+                         help="run on Claude Code even when the seat is another harness (MCP data, transcripts)")
+        sub.add_argument("--report", required=True, help="file the worker writes its final report to")
+        sub.add_argument("--effort", choices=EFFORTS, help="override the role's effort for this worker")
+        sub.add_argument("--quiet", action="store_true", help="send no hc notes to the parent terminal")
+        if command == "run":
+            sub.add_argument("--max-seconds", type=int, default=540)
+            sub.add_argument("--keep", action="store_true", help="leave the worker running after it reports")
+    wait = commands.add_parser("wait", help="wait until a worker finishes its turn, then check its report")
+    wait.add_argument("--name", required=True)
+    wait.add_argument("--report", required=True)
+    wait.add_argument("--max-seconds", type=int, default=540)
+    stop = commands.add_parser("stop", help="kill and remove workers")
+    stop.add_argument("names", nargs="+")
+    return parser.parse_args(argv)
+
+
+def main(argv):
+    arguments = parse_arguments(argv)
+    try:
+        if arguments.command == "roles":
+            print_roles(arguments.json)
+            return 0
+        if arguments.command == "stop":
+            result = stop_workers(arguments.names)
+        elif arguments.command == "wait":
+            result = wait_for_worker(arguments.name, arguments.report, arguments.max_seconds)
+        else:
+            result = start_worker(arguments.role, arguments.seat, arguments.name, arguments.cwd, arguments.brief,
+                                  arguments.report, arguments.quiet, arguments.effort, arguments.brief_text,
+                                  arguments.claude)
+            if arguments.command == "run":
+                result = {**result, **wait_for_worker(result["name"], result["report"], arguments.max_seconds)}
+                if result["status"] == "done" and not arguments.keep:
+                    stop_workers([result["name"]])
+    except WorkerError as error:
+        print(json.dumps({"error": str(error)}), file=sys.stderr)
+        return 2
+    print(json.dumps(result))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))
