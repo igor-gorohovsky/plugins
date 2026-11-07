@@ -35,7 +35,7 @@ Remaining triggers:
 - Any PR-status request ("babysit this", "get it green", "address the bugbot comments", and most often "check on PR X" or "anything outstanding on X") → the **Babysit** playbook (`playbooks/babysit.md`), not Cursor's built-in babysit skill, whose description matches the same words. Never triggered by merely opening a PR. Declare its mode before polling. The playbook's step 1 owns the request-to-mode mapping. Reaching for `drive` inside a phase agent stops that agent finishing its turn.
 - Asked to land or ship a green stack → the **Shipping** playbook (`playbooks/shipping.md`). Green is not safe. Nothing gets armed before an independent per-PR verdict, and only the contiguous verified run from the root lands.
 - Bugbot or the agentic security review commented → skeptical posture. They catch real bugs and also file non-issues and nitpicks, so assess each on its merits and dismiss noise with a concrete reason instead of churning code. Triage fix / dismiss / ask per `references/bugbot-triage.md`.
-- Broken skill mid-task → fix it in its own PR. Don't block. Don't silently work around it.
+- Broken skill mid-task → fix it in its own PR. Don't block. Don't silently work around it. A personal instruction file (`CLAUDE.local.md`, the gitignored `.claude/`) is edited in place, never in a PR or a shared AGENTS.md.
 - Long, autonomous, or multi-phase work, or any task the user steps away from to review later ("going to bed", "trust it when i'm back", "/loop until X") → a decision trail via the **show-me-your-work** skill. Commit it when stakes need an auditable record. Keep it local otherwise.
 
 ## Principles
@@ -85,7 +85,9 @@ Read the leaf skill in full for any principle you apply. Each entry names when i
 
 **Just do it.** Use any MCP tool. Reversible work and external actions (ticket updates, kicking off evals) proceed without asking. Messages people read under the user's name (Slack posts, DMs, review comments on someone else's PR) are drafts until the user says send, and nothing goes into another person's thread.
 
-**Always pause** for irreversible writes: force-push to shared branches, deploys, data deletion, customer messages.
+**Always pause** for irreversible writes: force-push to shared branches, prod and beta deploys, commands that change prod data, data deletion, customer messages. CI gates and non-prod deploys proceed.
+
+**Waiting on someone else's fix.** `/loop` on their thread, read only. When they report it fixed, check the data yourself, then update the ticket and tell the user in one line.
 
 **Session overrides:** "Don't stop" / "going to bed" / "run until done" / "be fully autonomous" → keep going.
 
@@ -99,7 +101,7 @@ The tracker is Notion. A repo can have a local ticket file with the database, st
 
 **Status.** Set In progress when real work starts. Set Verification when the PR is ready for review, which a babysit does. Done, Descoped, and Awaiting release belong to the user. Put a reason for On hold in a comment, never in the description. Start each comment with `🤖 Agent:`.
 
-**Creating tickets.** Only when the user asks, and only for work assigned to the user. One problem per ticket. The body has `## Problem` (the failure that a person can see, with its evidence, such as a URL, error text, or screenshot), `## Cause` when known, and `## Expected`. Do not write the fix or a plan unless the user asks for it. Assign the user. Set the status to Backlog or TODO. Select tags from the tracker's fixed set that match the part of the repo the work touches. Put related tickets in the relation field, and the source (meeting, chat, PR) as a link. When the user says a ticket is wrong, rewrite it in place, and do not add a second ticket.
+**Creating tickets.** Only when the user asks, and only for work assigned to the user. One problem per ticket. The body has `## Problem` (the failure that a person can see, with its evidence, such as a URL, error text, or screenshot), `## Cause` when known, and `## Expected`. Do not write the fix or a plan unless the user asks for it. Assign the user. Set the status to Backlog or TODO. Select tags from the tracker's fixed set that match the part of the repo the work touches. Put related tickets in the relation field, and the source (meeting, chat, PR) as a link. When the user says a ticket is wrong, rewrite it in place, and do not add a second ticket. When one source (a meeting, a thread, a DM) yields several tickets, show the user the proposed list before you create them.
 
 **PRs.** `playbooks/opening-a-pr.md` opens them as drafts. `playbooks/babysit.md` marks them ready and gets the checks green. Merges and deploys wait for the user's command.
 
