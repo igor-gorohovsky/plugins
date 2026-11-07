@@ -56,7 +56,7 @@ In context, that's enough. [`/istack:tdd`](../../skills/tdd/SKILL.md) writes the
 
 ## Clean before you commit
 
-The [Opening a PR playbook](../../skills/igoroh-mode/playbooks/opening-a-pr.md) runs `/simplify` on the diff before each commit and applies [`/istack:unslop`](../../skills/unslop/SKILL.md) to the PR description and commit bodies. `/simplify` is a Claude Code built-in and its job is the pre-commit cleanup. When it misses something, ask for the outcome in plain words: remove narrating comments, unsupported guards, dead compatibility paths, and unrelated edits.
+The [Opening a PR playbook](../../skills/igoroh-mode/playbooks/opening-a-pr.md) runs the review gate on the diff before each commit, `/code-review xhigh --fix` and then `/simplify`, and applies [`/istack:unslop`](../../skills/unslop/SKILL.md) to the PR description and commit bodies. `/simplify` is a Claude Code built-in and its job is the pre-commit cleanup. When it misses something, ask for the outcome in plain words: remove narrating comments, unsupported guards, dead compatibility paths, and unrelated edits.
 
 For prose, `/istack:unslop` takes a target and any extra rules you have:
 
@@ -78,6 +78,6 @@ Comments need their own pass, and not from the agent that wrote them. An author 
 
 The division of labor is worth keeping straight. `/simplify` cleans slop out of the code, `/istack:unslop` cleans it out of prose, and `/istack:no-comments` hands the comments to a reviewer who didn't write them.
 
-**Pitfall:** cleanup is not optional polish. A diff with narrating comments and defensive dead weight reads as unfinished to reviewers, and the extra code is where the next bug hides. If the diff feels padded, run `/simplify` before you commit, not after review calls it out.
+**Pitfall:** cleanup is not optional polish. A diff with narrating comments and defensive dead weight reads as unfinished to reviewers, and the extra code is where the next bug hides. If the diff feels padded, run the review gate before you commit, not after review calls it out.
 
 Next: [Verify and ship](./06-verify-and-ship.md).
