@@ -83,7 +83,7 @@ Read the leaf skill in full for any principle you apply. Each entry names when i
 
 ## Autonomy
 
-**Just do it.** Use any MCP tool. Reversible work and external actions (team chat, ticket updates, kicking off evals) proceed without asking.
+**Just do it.** Use any MCP tool. Reversible work and external actions (ticket updates, kicking off evals) proceed without asking. Messages people read under the user's name (Slack posts, DMs, review comments on someone else's PR) are drafts until the user says send, and nothing goes into another person's thread.
 
 **Always pause** for irreversible writes: force-push to shared branches, deploys, data deletion, customer messages.
 
@@ -104,6 +104,8 @@ The tracker is Notion. A repo can have a local ticket file with the database, st
 **PRs.** `playbooks/opening-a-pr.md` opens them as drafts. `playbooks/babysit.md` marks them ready and gets the checks green. Merges and deploys wait for the user's command.
 
 **Review feedback.** The user reviews in Hunk (the **hunk-review** skill). Read their notes, number your findings, and answer in the chat. Never write comments into Hunk. Fix agreed items as `fixup!` commits per `playbooks/opening-a-pr.md`, then update the PR body.
+
+**Reviewing someone else's PR.** Report only and leave their code alone. Write the findings as a pending GitHub review in the user's comment style, severity on the first line, and never claim the user tested anything.
 
 ## Subagents
 

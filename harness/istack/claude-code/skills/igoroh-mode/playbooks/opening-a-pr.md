@@ -2,7 +2,7 @@
 
 Invoked at the end of every other playbook.
 
-**Worktree and branch.** Work from a git worktree off main. Subagents inherit it. Multiple `Task` calls on the same branch each get their own worktree, or `git fetch && git reset --hard origin/<branch>` between them. Dirty branch with unrelated work: patch out, fresh worktree, apply. Snarled worktree: reset from main, redo minimally. Name the branch `<ticket-id>-<slug>` in lower-case kebab case, such as `ag-241-crop-card-previews`. Without a ticket, use a plain kebab-case name.
+**Worktree and branch.** Work from a git worktree off the repo's default branch (`gh repo view --json defaultBranchRef -q .defaultBranchRef.name`). Subagents inherit it. Multiple `Task` calls on the same branch each get their own worktree, or `git fetch && git reset --hard origin/<branch>` between them. Dirty branch with unrelated work: patch out, fresh worktree, apply. Snarled worktree: reset from main, redo minimally. Name the branch `<ticket-id>-<slug>` in lower-case kebab case, such as `ag-241-crop-card-previews`. Without a ticket, use a plain kebab-case name.
 
 **Commits.** Commit liberally, so that the commit history makes the review easy. A mechanical refactor never shares a commit with a behavior change. Tests go in the same commit as the code they test. Subjects are imperative, sentence case, at most 72 characters, with no type prefix and no ticket ID. Add a body only when the diff does not show the why. Before the first review, rebase into small ordered commits. After review starts, add `fixup!` commits and never rewrite pushed history, unless the user tells you to.
 
@@ -15,7 +15,7 @@ Invoked at the end of every other playbook.
 - `Ticket: <tracker url>` when a ticket exists. If the user gave the ticket ID but no URL, look it up in the tracker.
 - `Stacked on #<n>.` for a stack child.
 
-The body is a one-minute briefing for a reviewer who has the diff, and it becomes the squash commit body. Keep it short. Full SHAs, test-run logs, swarm or arena recitals, and file-by-file checklists stay out. Link an artifact when they matter. For a UI change, put screenshots in the Evidence section per `../references/pr-screenshots.md`. After each change to the branch, update the body, the title, and the screenshots. For a stack, update every affected layer in the same pass.
+The body is a one-minute briefing for a reviewer who has the diff, and it becomes the squash commit body. Keep it short. Full SHAs, test-run logs, swarm or arena recitals, and file-by-file checklists stay out. Link an artifact when they matter. Fill the Evidence section per `../references/pr-evidence.md`. After each change to the branch, update the body, the title, and the screenshots. For a stack, update every affected layer in the same pass.
 
 **Forge.** Resolve the forge before the first PR operation and keep that choice for create, edit, view, watch, and merge. GitHub CLI (`gh`) is the default. If `command -v origin` succeeds and Origin can resolve the repository, prefer `origin pr ...`. If Origin is absent or cannot resolve the repository, stay on `gh` and record the fallback. Do not require Graphite (`gt`).
 
