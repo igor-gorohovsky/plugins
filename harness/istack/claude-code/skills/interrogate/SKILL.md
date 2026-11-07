@@ -6,7 +6,7 @@ disable-model-invocation: true
 
 # Interrogate
 
-In Claude Code, read [the Claude Code adapter](../../docs/harness/claude-code.md) once per session before you follow this skill. It maps the Cursor names in istack skills to Claude Code.
+Workers run per [the workers doc](../../docs/workers.md). Read it once per session before you start one.
 
 Adversaries try to break a change or a design. A finding survives only when a run proves it. Report the findings. Do not apply fixes.
 
@@ -16,15 +16,15 @@ The scope is what the user names. Otherwise it is the branch diff from its merge
 
 ## Fan out
 
-Run Phase A steps 3 and 4 and Phase B of the **arena** skill, with four changes. Read the `interrogate reviewers` line in place of `arena runners`. Copy the scope's uncommitted changes into each worktree. Spawn each adversary as `generalPurpose`. In place of the arena task and rationale, give each adversary the scope, the intent, and this brief:
+Give each seat of the `interrogate reviewers` role its own git worktree at the scope's head, with the scope's uncommitted changes copied in. Write the intent to `<dir>/intent.md`.
+
+Run a panel with one worker per seat, each with `cwd` set to its worktree, and `verify` set to `{instructions: "the intent is in <dir>/intent.md"}`. Each worker's brief carries the scope, the intent, and this:
 
 > Break this change. Prove each finding with a run against the real code, such as a failing test, a repro script, or command output that shows the wrong behavior. For a design or plan, run a prototype or probe the current tree. Keep repros in your own worktree. Report each finding with a title, the exact command, the output it printed, and the output the intent requires. Leave out anything you did not run. That covers style, naming, structure, and risks that need a future change to matter. No findings is a valid result.
 
 ## Verify
 
-Verify each finding per arena Phase F by rerunning its command. Keep a finding when the output shows the failure and the failure breaks the intent. Drop the rest. Merge findings that share a root cause.
-
-Skip arena Phases C, D, and E. Adversaries find different failures, so the verdict keeps every verified finding, not one adversary's list.
+The panel reruns every finding in its adversary's worktree and returns the reproduced ones in `findings`. Rerun any finding whose verdict you doubt yourself. Merge findings that share a root cause. Adversaries find different failures, so the verdict keeps every verified finding, not one adversary's list.
 
 ## Output
 

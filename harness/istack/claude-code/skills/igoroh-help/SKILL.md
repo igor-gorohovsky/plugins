@@ -6,27 +6,28 @@ disable-model-invocation: true
 
 # Igoroh help
 
-In Claude Code, read [the Claude Code adapter](../../docs/harness/claude-code.md) once per session before you follow this skill. It maps the Cursor names in istack skills to Claude Code.
+Workers run per [the workers doc](../../docs/workers.md). Read it once per session before you start one.
 
 Answer the user's question about istack, hand them a prompt they can send, and link the file the answer came from. For a help question, don't start the work. The user asked how, and a istack run spends real tokens, so let them send the prompt.
 
-A message that asks for work, such as "use istack to fix this bug", is not a help question. Read [`igoroh-mode`](../igoroh-mode/SKILL.md), do the work under it, and mention once that a Custom Mode keeps it on.
+A message that asks for work, such as "use istack to fix this bug", is not a help question. Read [`igoroh-mode`](../igoroh-mode/SKILL.md) and do the work under it.
 
-This file maps questions to the skills and guide pages that hold the answers. Those files own the details. Read the file you route to before you quote it, and trust it when it disagrees with this map. The links here point into the installed plugin, which the user may not be able to open, so give the user the file's public copy: `https://github.com/cursor/plugins/blob/main/pstack/` followed by its path.
+This file maps questions to the skills and guide pages that hold the answers. Those files own the details. Read the file you route to before you quote it, and trust it when it disagrees with this map. The links here point into the plugin checkout at `~/projects/plugins/harness/istack/claude-code/`. Give the user that absolute path.
 
 ## Find out what they need
 
 Infer the need from the message and the conversation. A named situation, such as "which skill reviews a PR?", goes straight to its section. If the need is still unclear, ask one multiple-choice question with these options, then answer only the section they pick:
 
 - Get set up
-- Start a task with `/igoroh-mode`
+- Start a task with `/istack:igoroh-mode`
 - Pick a skill for a situation
 - Fix a run that went wrong
 - Make istack my own
 
 Check the state that changes the answer, and mention it only when it does:
 
-- No `~/.cursor/rules/istack-models.mdc` means `/setup-istack` hasn't run for this user, so every role uses its default model.
+- No `~/.claude/rules/istack-models.md`, or no `istack-worker` on the PATH, means `/istack:setup-istack` hasn't run, so every role uses `istack-worker`'s default seat.
+- No `HC_TERMINAL_ID` means Claude Code is not running inside Herdr, so no worker can start.
 - No `verify-*` skill or other app harness in the project means agents have no scripted way to drive the app. Mention `/create-verification-skill` when the question is about proving a change works.
 - No formal verification skill in the project means no property is checked past what tests reach. Mention `/create-formal-verification-skill` when the question is about a race, an invariant, or another case tests rarely hit. When one exists and the code it covers changed after the commit it records as last in sync, mention `/maintain-formal-verification-skill` if the question touches that code.
 
@@ -37,29 +38,21 @@ When the model rule is missing and it matters, ask whether the user wants to pic
 
 ## Get set up
 
-1. Install with `/add-plugin istack` in chat, or from Customize in the sidebar.
-2. Run [`/setup-istack`](../setup-istack/SKILL.md). It asks for a reasoning budget, maps a model to each role, and writes a rule. The rule applies to new chats. Then it offers once each to generate a verification skill and a formal verification skill for the project, unless the project already has one.
-3. Start a real task with `/igoroh-mode`, a goal, and a check that can pass or fail.
+1. Install with `/plugin install istack@igor-plugins`, from the local marketplace at `~/projects/plugins`. Run Claude Code inside Herdr.
+2. Run [`/istack:setup-istack`](../setup-istack/SKILL.md). It links `istack-worker`, asks for a reasoning budget, maps a seat (harness, model, effort) to each role, and writes `~/.claude/rules/istack-models.md`. Then it offers once each to generate a verification skill and a formal verification skill for the project, unless the project already has one.
+3. Start a real task with `/istack:igoroh-mode`, a goal, and a check that can pass or fail.
 
 Installing changes nothing until the user invokes a skill. Only `/setup-istack` loads from the user's words. The [README](../../README.md) and [guide page 1](../../docs/guide/01-setup.md) have the details. Offer to word their first prompt with them, per [`references/prompting.md`](references/prompting.md).
 
-If cost is the worry, say where the tokens go and how to spend fewer. istack spends extra tokens on subagents and review panels. Rerun `/setup-istack` and pick a smaller budget or cheaper models. A role set to `auto` or `inherit-parent` runs on the chat's model, which saves tokens when the chat runs on Auto or a cheaper model. A shorter panel list runs fewer subagents, one for each entry. Save `/igoroh-mode` for work that needs rigor.
+If cost is the worry, say where the tokens go and how to spend fewer. istack spends extra tokens on workers and panels. Rerun `/istack:setup-istack` and pick a smaller budget or cheaper seats, such as a pi seat on a cheap model. A shorter panel list runs fewer workers, one for each seat. Each panel also spends a few Haiku relay agents, one per worker. Save `/igoroh-mode` for work that needs rigor.
 
-istack is built for Cursor, and it also installs in Claude Code with `/plugin marketplace add cursor/plugins`, then `/plugin install istack@cursor-plugins`. There, each command takes a `istack:` prefix, such as `/istack:igoroh-mode`. The [Claude Code adapter](../../docs/harness/claude-code.md) maps the Cursor names, and a step that needs a Cursor-only feature, such as Bugbot or Automations, is skipped with a one-line note.
-
-Other tools can read the skills, because they use the Agent Skills format. But most workflow skills, including `/igoroh-mode`, `/how`, `/why`, and `/teach`, spawn Cursor subagents with per-role models, and Custom Modes and `/loop` are Cursor features, so those parts may not work there.
+istack runs in Claude Code inside Herdr. Each command takes the `istack:` prefix, such as `/istack:igoroh-mode`. Workers run as Herdr terminals on Claude Code, pi, or Codex, so the user can watch and steer them from the sidebar. Fixed-shape fan-outs run through the `istack:panel` workflow, which `/workflows` shows live. The [workers doc](../../docs/workers.md) has the details.
 
 ## Start a task with `/igoroh-mode`
 
 `/igoroh-mode` matches the task to a playbook, copies the playbook's steps into the todo list, and runs the other skills as the steps need them. A step it skips stays in the list as `skip: <reason>`. A good prompt states the goal and how to tell it's done. It doesn't list skills, because a hand-written sequence tends to drop or reorder steps the playbook would keep. Read [`references/prompting.md`](references/prompting.md) before you help word one. [Guide page 2](../../docs/guide/02-igoroh-mode.md) has examples.
 
-Whether `/igoroh-mode` stays on depends on how the user starts it:
-
-- Enter on `/igoroh-mode` attaches the skill to one message. It fades as the chat moves on.
-- Option+Enter on Mac or Alt+Enter on Windows, or Use as Mode from the skill entry, makes it a Custom Mode. It stays in context every turn until the user exits the mode, and it stays out of casual turns.
-- Cursor's docs list Custom Modes in the Agents Window and the CLI. Elsewhere, start each new task with `/igoroh-mode`.
-
-Link [Cursor's skills docs](https://cursor.com/docs/skills) when this comes up. Mid-chat, "new task" makes the mode match a fresh playbook. `/igoroh-mode` already uses `igoroh-agent` for the subagents its playbook steps spawn. To get the same style from a subagent of your own, spawn it with `subagent_type: "igoroh-agent"`.
+`/istack:igoroh-mode` loads the skill into the chat once. It stays in context, but its pull fades over a long chat, so start each new task with it. Mid-chat, "new task" makes the mode match a fresh playbook. The workers it starts read igoroh-mode themselves, because their briefs point to it.
 
 ## Pick a skill
 
@@ -79,7 +72,7 @@ The default answer is `/igoroh-mode`, which runs most of the others when its ste
 | Know what a small diff could break outside itself | [`/blast-radius`](../blast-radius/SKILL.md) |
 | Settle types and module shape before code that crosses a function boundary | [`/architect`](../architect/SKILL.md) |
 | Get several attempts at one brief, merged into the best one | [`/arena`](../arena/SKILL.md) |
-| Run parallel checks over slices, or race workers, as cloud agents | [`/swarm`](../swarm/SKILL.md) |
+| Run parallel checks over slices, or race workers | [`/swarm`](../swarm/SKILL.md) |
 | Have different models review a diff and try to break it | [`/interrogate`](../interrogate/SKILL.md) |
 | Fix a bug test-first when a cheap local test exists | [`/tdd`](../tdd/SKILL.md) |
 | Apply TypeScript rules to `.ts` or `.tsx` work | [`/typescript-best-practices`](../typescript-best-practices/SKILL.md) |
@@ -99,7 +92,6 @@ The default answer is `/igoroh-mode`, which runs most of the others when its ste
 | Turn their own working habits into a personal mode skill | [`/automate-me`](../automate-me/SKILL.md) |
 | Turn what a finished task taught into skill edits | [`/reflect`](../reflect/SKILL.md) |
 | Stop agents from repeating the same mistakes in this repo | [`/correct`](../correct/SKILL.md) |
-| Build a page whose buttons wake a Grok Bot over a webhook | [`/make-bot-ui`](../make-bot-ui/SKILL.md) |
 | Find their way around istack | `/igoroh-help` |
 
 If a skill directory next to this one is missing from the table, read its frontmatter and route by its description. The `principle-*` directories are covered under principles below.
@@ -115,8 +107,8 @@ Close calls:
 
 Not in istack:
 
-- `/deslop`, `control-cli`, and `control-ui` ship in the `cursor-team-kit` plugin.
-- `/loop` and `/create-skill` are Cursor built-ins.
+- `/simplify` (the pre-commit cleanup) and `/loop` are Claude Code built-ins.
+- `writing-for-agents` and `anthropic-skills:skill-creator` author skills.
 - istack has no `/orchestrate` skill. Orchestrate is a `/igoroh-mode` playbook. If the slash menu shows `/orchestrate`, another plugin provides it.
 
 ## Playbooks and principles
@@ -130,9 +122,9 @@ Playbooks are step lists inside `/igoroh-mode`, not skills, so they have no slas
 - "full autopilot on this queue" runs Autopilot-full. "autopilot, don't merge" runs Autopilot-stack.
 - "run the eval playbook" runs Eval.
 
-Without `/igoroh-mode`, a phrase such as "babysit this pr" can start Cursor's own skill for the same job instead. The Playbooks section of [`igoroh-mode`](../igoroh-mode/SKILL.md) lists every playbook and when it applies. [Guide page 6](../../docs/guide/06-verify-and-ship.md) covers opening, babysitting, and landing a PR.
+The Playbooks section of [`igoroh-mode`](../igoroh-mode/SKILL.md) lists every playbook and when it applies. [Guide page 6](../../docs/guide/06-verify-and-ship.md) covers opening, babysitting, and landing a PR.
 
-istack has no planning skill. Cursor's Plan Mode works alongside it. For work that spans phases or stacked PRs, asking `/igoroh-mode` for a plan runs the [Multi-phase plan playbook](../igoroh-mode/playbooks/multi-phase-plan.md), which writes the plan and doesn't implement it. For a design question, the Prototype playbook or `/architect` settles it in code first.
+istack has no planning skill. Claude Code's plan mode works alongside it. For work that spans phases or stacked PRs, asking `/igoroh-mode` for a plan runs the [Multi-phase plan playbook](../igoroh-mode/playbooks/multi-phase-plan.md), which writes the plan and doesn't implement it. For a design question, the Prototype playbook or `/architect` settles it in code first.
 
 Principles are one-rule skills that `/igoroh-mode` reads and cites in its replies. The user rarely invokes one. They steer with the names instead, as in "apply prove it works. show me the real output." Typing `/principle-<name>` still loads one on demand. [Guide page 8](../../docs/guide/08-principles.md) lists them.
 
@@ -140,12 +132,14 @@ Principles are one-rule skills that `/igoroh-mode` reads and cites in its replie
 
 | Symptom | Fix |
 |---|---|
-| The mode stopped applying after a few turns | It was started with Enter. Start it as a Custom Mode, or start each task with `/igoroh-mode`. |
+| The mode stopped applying after a few turns | Start each new task with `/istack:igoroh-mode`. |
 | A question got treated as the next step of the last task | Say "new task", or say the turn doesn't need the mode. |
-| A new model choice had no effect | The rule from `/setup-istack` applies to new chats. Start one. |
+| A new model choice had no effect | Workers read `~/.claude/rules/istack-models.md` at launch. `istack-worker roles` shows what runs now. |
+| A worker sits `blocked` | It needs a person. `hc read <name>` shows its question. |
+| A panel says `istack:panel` not found | The session started before istack's workflows existed. Run `/reload-plugins` or start a new chat. |
 | Runs cost more than expected | See the cost paragraph under Get set up. |
-| A skill didn't load on its own | Only `/setup-istack` loads from the user's words. The others load when the user types them or when `/igoroh-mode` runs them, and it doesn't run every skill. |
-| Parallel agents overwrote each other | Give each agent its own worktree, or run them as cloud agents, which each get their own machine. |
+| A skill didn't load on its own | Only `/istack:setup-istack` loads from the user's words. The others load when the user types them or when `/igoroh-mode` runs them, and it doesn't run every skill. |
+| Parallel workers overwrote each other | Give each worker its own worktree as its `--cwd`. |
 | An overnight run moved but finished nothing | `/loop` needs a check that can pass or fail, not a duration. See [guide page 7](../../docs/guide/07-overnight.md). |
 | The reply claims success from a green build | Ask for the real command, flow, stored value, or profile. That's the prove-it-works principle. |
 

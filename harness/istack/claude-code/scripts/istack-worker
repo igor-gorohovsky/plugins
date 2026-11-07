@@ -217,6 +217,19 @@ def stop_workers(names):
     return stopped
 
 
+def expand_role_names(rows):
+    names = {}
+    for label, row in rows.items():
+        parts = [part.strip() for part in label.split(",")]
+        prefix = parts[0].split()[0]
+        for part in parts[1:]:
+            names[part] = row
+            names[f"{prefix} {part}"] = row
+        if len(parts) > 1:
+            names[parts[0]] = row
+    return names
+
+
 def print_roles(as_json):
     table = read_role_table()
     rows = {}
@@ -225,7 +238,7 @@ def print_roles(as_json):
         rows[label] = {"source": row["source"],
                        "seats": [{**entry, "command": build_command(entry)} for entry in entries]}
     if as_json:
-        print(json.dumps(rows, indent=2))
+        print(json.dumps({**expand_role_names(rows), **rows}, indent=2))
         return
     for label, row in rows.items():
         seats = "; ".join(" ".join(seat["command"]) for seat in row["seats"])

@@ -87,6 +87,16 @@ class RoleTableTest(unittest.TestCase):
         self.assertEqual(len(worker.convert_to_terminal_name("x" * 50)), 32)
 
 
+class RolesJsonTest(unittest.TestCase):
+    def test_json_names_every_part_of_a_comma_role(self):
+        completed = subprocess.run([sys.executable, str(SCRIPT), "roles", "--json"], capture_output=True, text=True,
+                                   env={**os.environ, "ISTACK_MODELS_RULE": "/nonexistent"})
+        roles = json.loads(completed.stdout)
+        for name in ("reflect synthesizer", "reflect judgment", "reflect divergent", "feature", "refactoring", "how explainer"):
+            self.assertIn(name, roles)
+        self.assertEqual(roles["reflect synthesizer"]["seats"][0]["model"], "opus")
+
+
 class WorkerLifecycleTest(unittest.TestCase):
     def setUp(self):
         self.directory = tempfile.TemporaryDirectory()
