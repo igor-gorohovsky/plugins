@@ -107,7 +107,7 @@ Close calls:
 
 Not in istack:
 
-- `/code-review` and `/simplify` (the review gate before each commit) and `/loop` are Claude Code built-ins.
+- `/simplify` and `/code-review` (the review gate before each commit) and `/loop` are Claude Code built-ins.
 - `writing-for-agents` and `anthropic-skills:skill-creator` author skills.
 - istack has no `/orchestrate` skill. Orchestrate is a `/igoroh-mode` playbook. If the slash menu shows `/orchestrate`, another plugin provides it.
 

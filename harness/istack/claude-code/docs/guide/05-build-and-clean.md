@@ -56,7 +56,7 @@ In context, that's enough. [`/istack:tdd`](../../skills/tdd/SKILL.md) writes the
 
 ## Clean before you commit
 
-The [Opening a PR playbook](../../skills/igoroh-mode/playbooks/opening-a-pr.md) runs the review gate on the diff before each commit, `/code-review xhigh --fix` and then `/simplify`, and applies [`/istack:unslop`](../../skills/unslop/SKILL.md) to the PR description and commit bodies. `/simplify` is a Claude Code built-in and its job is the pre-commit cleanup. When it misses something, ask for the outcome in plain words: remove narrating comments, unsupported guards, dead compatibility paths, and unrelated edits.
+The [Opening a PR playbook](../../skills/igoroh-mode/playbooks/opening-a-pr.md) runs the review gate on the diff before each commit, `/simplify` and then `/code-review xhigh --fix`, and applies [`/istack:unslop`](../../skills/unslop/SKILL.md) to the PR description and commit bodies. `/simplify` is a Claude Code built-in and its job is the pre-commit cleanup. When it misses something, ask for the outcome in plain words: remove narrating comments, unsupported guards, dead compatibility paths, and unrelated edits.
 
 For prose, `/istack:unslop` takes a target and any extra rules you have:
 

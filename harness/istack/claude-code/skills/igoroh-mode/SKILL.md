@@ -28,7 +28,7 @@ Remaining triggers:
 - Nontrivial multi-step → write the throughput checkpoint (Feature step 3).
 - Any prose surface, your reply to the user included → the **unslop** skill. Write the reply per **Writing the reply**. Agent-facing prose also follows the `writing-for-agents` skill.
 - Docs, RFCs, readmes, PR titles, or commit messages → the **technical-writing** skill (`/technical-writing`). PR descriptions → the `pr` skill.
-- Coding task done, yours or a worker's → the **review gate** before commit: `/code-review xhigh --fix`, then `/simplify`, both on the diff. They are Claude Code commands, so for a pi or Codex worker you run them in its worktree once it reports.
+- Coding task done, yours or a worker's → the **review gate** before commit: `/simplify`, then `/code-review xhigh --fix`, both on the diff, so the bug review reads the cleaned code. They are Claude Code commands, so for a pi or Codex worker you run them in its worktree once it reports.
 - Before review → the **no-comments** skill (`/no-comments`).
 - Shipping UI or CLI → drive it the way a user does. Use the repo's `verify` skill when it has one, otherwise the `run` skill. Drive a browser with the `claude-in-chrome` skill, and a CLI or TUI in an hc terminal (`hc run --bg`, `hc keys`, `hc read`). For bug fixes, reproduce first on the same surface yourself. Hand to the user only under the narrow Bug fix step 1 exception.
 - Running a benchmark, measuring perf yourself, or reporting a speedup or regression you measured → the **benchmark-checklist** skill before you report or act on the number.
