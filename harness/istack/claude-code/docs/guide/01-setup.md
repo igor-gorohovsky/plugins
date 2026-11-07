@@ -4,63 +4,68 @@ In this page you install the plugin, pick which models istack uses, and run your
 
 ## Install the plugin
 
-In a Cursor chat, run:
+istack runs in Claude Code, and it runs every worker as a Herdr terminal. Start Claude Code from inside Herdr, so `HC_TERMINAL_ID` is set. Without it no worker can start, and istack tells you so. The [workers doc](../workers.md) covers how workers run.
+
+Install from the local marketplace at `~/projects/plugins`:
 
 ```text
-/add-plugin istack
+/plugin marketplace add ~/projects/plugins
+/plugin install istack@igor-plugins
 ```
 
-Cursor confirms the plugin is installed.
-
-In Claude Code, run `/plugin marketplace add cursor/plugins`, then `/plugin install istack@cursor-plugins`. Claude Code prefixes plugin commands, so each command in this guide takes a `istack:` prefix there, such as `/istack:setup-istack`, which writes its model rule to `~/.claude/rules/istack-models.md`. The [Claude Code adapter](../harness/claude-code.md) covers the other differences.
+Claude Code prefixes plugin commands with the plugin name, so each istack skill runs as `/istack:<name>`, such as `/istack:setup-istack`.
 
 ## Pick your models
 
 Run:
 
 ```text
-/setup-istack
+/istack:setup-istack
 ```
 
-[`/setup-istack`](../../skills/setup-istack/SKILL.md) detects the models you have access to, asks for a reasoning budget, shows you each role (code delegates, judgment, the review panels), and asks what you want. Answer the questions. It writes `~/.cursor/rules/istack-models.mdc`, a small rule every istack skill reads.
+[`/istack:setup-istack`](../../skills/setup-istack/SKILL.md) links `istack-worker` onto your PATH, detects the harnesses and models this machine can run, asks for a reasoning budget, shows you each role (code workers, judgment, the review panels), and asks what you want. Answer the questions. It writes `~/.claude/rules/istack-models.md`, a small rule that every istack skill and every worker reads.
 
-The defaults run at `xhigh` reasoning, the same as the `large` budget. `unlimited` lifts each model to its highest tier, up to `max`. Opus goes to `max`. Grok tops out at `xhigh`, so it stays there. `medium` and `small` lower the reasoning and spend fewer tokens.
+A seat is one harness, one model, and one effort. The rule writes a seat as `<opus|sonnet|haiku|fable> <effort>`, `pi <provider>/<model> <effort>`, `codex <model> <effort>`, or `inherit-parent`. A worker runs in a Herdr terminal on that seat's harness, so one panel can mix Claude Code, pi, and Codex.
 
-You only override what you care about. A role with no line in the rule keeps the skill's default. To restore a default, delete that role's line. A rerun of `/setup-istack` keeps any role whose model differs from the default. When a default changes, a rule written before the change still pins the old default, so delete those role lines, or delete the file, then run `/setup-istack` again.
+The budget sets the effort on each seat. `unlimited` is `max`, `large` is `xhigh`, `medium` is `high`, and `small` is `medium`. A higher budget thinks longer and spends more tokens.
 
-You might be wondering what happens if you use Auto. Set a role to `inherit-parent` or `auto` and istack omits the subagent `model` field, so the subagent inherits your parent chat model. Both values mean the same thing, and neither is a model slug. For a panel role the value is a list, and one subagent runs per entry, so the list length sets the panel size. Setup also configures `swarm workers`, the default model for every `/swarm` worker unless a race names a model for each arm.
+Setup writes a line for every role. A role with no line keeps `istack-worker`'s own default, so deleting a line restores that default. A rerun keeps any seat you changed. When a default changes in a later version, a rule written before the change still pins the old default, so delete that role's line, or delete the file, then run setup again.
+
+Set a role to `inherit-parent` to run it on the chat's own model. For a panel role the value is a list, and one worker runs per seat, so the list length sets the panel size. `arena runners`, `architect runners`, and `interrogate reviewers` are panel roles, and each keeps seats from at least two harness families so the panel stays a real second opinion. Run `istack-worker roles` at any time to see every role with the command each seat runs.
 
 ## Accept the verification offers, or don't
 
-At the end of setup, `/setup-istack` looks for a way to prove app behavior in your project, either a `verify-*` skill or an existing harness. If it finds neither, it offers once to generate one with [`/create-verification-skill`](../../skills/create-verification-skill/SKILL.md).
+At the end of setup, `/istack:setup-istack` looks for a way to prove app behavior in your project, either a `verify-*` skill or an existing harness. If it finds neither, it offers once to generate one with [`/istack:create-verification-skill`](../../skills/create-verification-skill/SKILL.md).
 
-Say yes and it writes `.cursor/skills/verify-<app>/`, a project-local skill that teaches agents to drive your app the way a user does. It proves the skill works once before handing it over. Say no and setup moves on. You can run `/create-verification-skill` yourself any time. [Verify and ship](./06-verify-and-ship.md#create-a-project-verification-skill) covers it in depth.
+Say yes and it writes `.claude/skills/verify-<app>/`, a project-local skill that teaches a worker to drive your app the way a user does. It proves the skill works once before handing it over. Say no and setup moves on. You can run `/istack:create-verification-skill` yourself any time. [Verify and ship](./06-verify-and-ship.md#create-a-project-verification-skill) covers it in depth.
 
-If you're new to istack, say yes. An agent that can check its own work keeps going until the check passes. An agent that can't hands every result back to you to check by hand. Of everything in this guide, the verification skill pays off the most.
+If you're new to istack, say yes. A worker that can check its own work keeps going until the check passes. A worker that can't hands every result back to you to check by hand. Of everything in this guide, the verification skill pays off the most.
 
-Then setup offers once to generate a formal verification skill with [`/create-formal-verification-skill`](../../skills/create-formal-verification-skill/SKILL.md), unless the project already has one. Tests check the cases someone thought to write. A formal verification skill checks one key property of your code, such as "a job never runs twice at once", in every case within a stated scope. Say yes when your code has concurrency, retries, a state machine, or a parser, where a bug is costly and tests rarely reach the case that breaks. Otherwise say no, and run it later if that changes. [Verify and ship](./06-verify-and-ship.md#prove-a-property-with-a-formal-verification-skill) covers it.
+Then setup offers once to generate a formal verification skill with [`/istack:create-formal-verification-skill`](../../skills/create-formal-verification-skill/SKILL.md), unless the project already has one. Tests check the cases someone thought to write. A formal verification skill checks one key property of your code, such as "a job never runs twice at once", in every case within a stated scope. Say yes when your code has concurrency, retries, a state machine, or a parser, where a bug is costly and tests rarely reach the case that breaks. Otherwise say no, and run it later if that changes. [Verify and ship](./06-verify-and-ship.md#prove-a-property-with-a-formal-verification-skill) covers it.
 
 After setup, start a new chat. The model rule applies to new sessions.
 
 ## Keep the cost in check
 
-istack spends extra tokens on subagents and review panels. That's the price of the rigor. To spend fewer:
+istack spends extra tokens on workers and review panels. That's the price of the rigor. To spend fewer:
 
-- Rerun `/setup-istack` and pick a smaller reasoning budget or cheaper models. A strong model in the main chat with cheaper, faster models in the code roles is a good split.
-- Set a role to `auto` or `inherit-parent` so it runs on the chat's own model.
-- Shorten a panel list. Each entry runs one subagent.
-- Save `/igoroh-mode` for work that needs rigor. A small, obvious edit doesn't.
+- Rerun `/istack:setup-istack` and pick a smaller reasoning budget, or cheaper seats such as a pi seat on a cheap model. A strong model in the main chat with cheaper, faster workers in the code roles is a good split.
+- Set a role to `inherit-parent` so it runs on the chat's own model.
+- Shorten a panel list. Each seat runs one worker, and a panel also spends one short Haiku relay agent per worker.
+- Save `/istack:igoroh-mode` for work that needs rigor. A small, obvious edit doesn't.
 
 ## Run your first task
 
 Pick something real but small, and describe it the way you'd describe it to a colleague:
 
 ```text
-/igoroh-mode add a --json flag to this command. text output stays byte-identical. verify both.
+/istack:igoroh-mode add a --json flag to this command. text output stays byte-identical. verify both.
 ```
 
-Watch the todo list. Its first items are the matched playbook's steps copied in, the Feature playbook for this prompt. If `/igoroh-mode` skips a step, the step stays in the list with `skip: <reason>`, so you can see what it chose not to do.
+Watch the todo list. Its first items are the matched playbook's steps copied in, the Feature playbook for this prompt. If `/istack:igoroh-mode` skips a step, the step stays in the list with `skip: <reason>`, so you can see what it chose not to do.
 
-From here you can type normal follow-ups. To keep `/igoroh-mode` on for the whole chat, pick it from the `/` menu with Option+Enter (Mac) or Alt+Enter (Windows) instead of Enter. That makes it a [Custom Mode](https://cursor.com/docs/skills#using-a-skill-as-a-custom-mode), which stays in context on every turn until you exit it. Custom Modes are available in the Agents Window and the CLI. Plain Enter attaches the skill to one message, and it fades as the chat moves on.
+A step that fans out starts workers. Each worker opens as a terminal in Herdr, so you can watch it in the sidebar, read its screen with `hc read <name>`, and steer it with `hc send <name> "<text>"`. You don't sit and wait on it. You keep working, and istack notes you when the worker's turn ends.
 
-Next: [Route work through `/igoroh-mode`](./02-igoroh-mode.md).
+From here you can type normal follow-ups. `/istack:igoroh-mode` loads into the chat once and stays in context, but its pull fades over a long chat, so start each new task with it. A worker reads the mode itself, because istack puts the mode's path in its brief.
+
+Next: [Route work through `/istack:igoroh-mode`](./02-igoroh-mode.md).
