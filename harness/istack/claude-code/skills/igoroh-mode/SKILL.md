@@ -95,7 +95,7 @@ Read the leaf skill in full for any principle you apply. Each entry names when i
 
 ## Tickets and PRs
 
-The tracker is Notion. A repo can have a local ticket file with the database, statuses, and `ntn` commands, such as `~/.herdr/worktrees/studio/CLAUDE.md` for studio. When it loads, it overrides the defaults here.
+The tracker is Notion. A repo can have a local ticket file with the database, statuses, and the Notion connector calls, such as `~/.herdr/worktrees/CLAUDE.md`, which every worktree under `~/.herdr/worktrees` loads. When it loads, it overrides the defaults here.
 
 **Intake.** Before you write code, read the whole ticket, with its properties, description, comments, and linked pages. When the user gives a board URL, find their open ticket on it, and do not ask which one. Each ticket gets its own worktree and branch, per `playbooks/opening-a-pr.md`. When no ticket is given, ask once. "No ticket" is a valid answer.
 
