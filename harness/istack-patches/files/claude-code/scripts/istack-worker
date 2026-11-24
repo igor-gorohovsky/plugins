@@ -252,7 +252,7 @@ class RexMux(Mux):
             return "exited"
         baseline = self._locate_baseline(name)
         after = baseline.read_text().strip() if baseline.exists() else ""
-        state = self._read_state(name, worker["block_id"], seconds, after)
+        state = self._read_state(name, worker, seconds, after)
         # An agent that sits idle was interrupted or never started: its turn is over, as under Herdr.
         return {"working": None, "idle": "done"}.get(state["status"], state["status"])
 
@@ -261,18 +261,17 @@ class RexMux(Mux):
         if worker is None:
             return "(the worker's window is closed)"
         # Read as text: a screen that happens to show JSON is still a screen.
-        code, screen = run_command(self.program, ["capture", "-b", worker["block_id"], "--trim"])
+        code, screen = run_command(self.program, ["capture", *self._address(worker), "--trim"])
         return "\n".join(screen.splitlines()[-SCREEN_TAIL_LINES:])
 
     def send_text(self, name, text):
         worker = self._find_worker(name)
         if worker is None:
             raise WorkerError(f"no Rex window is named {name}")
-        block = worker["block_id"]
         # The record of the turn that ended before this message must not end the next wait. It is read before the
         # message is typed and kept only once the message is in: a message that failed starts no turn to wait for.
-        turn_before = self._read_state(name, block, 0, "").get("at", "")
-        for arguments in (["send", "-b", block, text], ["send-key", "-b", block, "enter"]):
+        turn_before = self._read_state(name, worker, 0, "").get("at", "")
+        for arguments in (["send", *self._address(worker), text], ["send-key", *self._address(worker), "enter"]):
             code, result = self._run(arguments)
             if code != 0:
                 raise WorkerError(f"rex {arguments[0]} to {name} failed: {json.dumps(result)}")
@@ -287,9 +286,14 @@ class RexMux(Mux):
         code, result = self._run(["window", "close", worker["window_id"], "-s", worker["session_id"]])
         return code == 0
 
-    def _read_state(self, name, block_id, seconds, after):
+    def _address(self, worker):
+        """Rex finds a block only in the session -s names, or else in the caller's own, so a worker in another session
+        needs both."""
+        return ["-s", worker["session_id"], "-b", worker["block_id"]]
+
+    def _read_state(self, name, worker, seconds, after):
         """Run the wait script: the state that ends the worker's turn, or "working" after `seconds`."""
-        arguments = ["do", "-b", block_id, str(self.wait_script), f"timeout={seconds}"]
+        arguments = ["do", *self._address(worker), str(self.wait_script), f"timeout={seconds}"]
         if after:
             arguments.append(f"after={after}")
         code, result = self._run(arguments)

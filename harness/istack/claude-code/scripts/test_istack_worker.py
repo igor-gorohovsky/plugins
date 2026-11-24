@@ -215,6 +215,14 @@ class WorkerLifecycleTest(FakeMuxTestCase):
 FAKE_REX = FAKE_TOOL_START + textwrap.dedent("""\
     state = json.loads(os.environ["FAKE_REX_STATE"])
     arguments = sys.argv[1:]
+    # Like Rex, a block is found only in the session that -s names, or else in the caller's own session.
+    if "-b" in arguments:
+        block = arguments[arguments.index("-b") + 1]
+        home = next((key for key, value in state.items() if block in ["block:" + label for label in value["windows"]]), None)
+        scope = arguments[arguments.index("-s") + 1] if "-s" in arguments else "session:own"
+        if home is not None and home != scope:
+            print(f'Error: block target "{block}" not found')
+            sys.exit(1)
     if arguments[:2] == ["ls", "--json"]:
         listings = sum(1 for line in log.read_text().splitlines() if json.loads(line)[:1] == ["ls"])
         print(json.dumps({"sessions": [{"session_id": key, "label": value["label"]} for key, value in state.items()
@@ -302,7 +310,7 @@ class RexWorkerTest(FakeMuxTestCase):
         self.assertEqual((code, result["status"], result["report_exists"]), (0, "done", True))
         waited = [call for call in self.read_calls() if call[0] == "do"]
         self.assertEqual(len(waited), 2)
-        self.assertEqual(waited[0][1:3], ["-b", "block:impl"])
+        self.assertEqual(waited[0][1:5], ["-s", "session:ticket", "-b", "block:impl"])
 
     def test_wait_reports_an_exit_with_the_screen_tail(self):
         code, result = self.run_worker(["wait", "--name", "impl", "--report", str(self.report)],
