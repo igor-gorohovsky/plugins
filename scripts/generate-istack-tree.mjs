@@ -220,6 +220,9 @@ function reportDanglingLinks(tree) {
 const check = process.argv.includes("--check");
 execFileSync(process.execPath, [UPSTREAM_GENERATOR, ...(check ? ["--check"] : [])], { cwd: ROOT, stdio: "inherit" });
 if (process.argv.includes("--record")) {
+  // --record rewrites the patch layer from harness/istack, so an edit made in the layer and not yet generated would be lost.
+  const pending = execFileSync("git", ["status", "--porcelain", "--", dirname(PATCHES)], { cwd: ROOT, encoding: "utf8" });
+  if (pending) throw new Error(`harness/istack-patches has uncommitted changes that --record would overwrite. Run \`${COMMAND}\` to apply them, commit, then edit harness/istack.\n${pending}`);
   const onDisk = readTree(OUT);
   recordTree(buildBaseTree(), onDisk);
   reportDanglingLinks(onDisk);
