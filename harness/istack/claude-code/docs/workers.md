@@ -2,6 +2,10 @@
 
 istack runs every subagent as a **worker**: an interactive agent (Claude Code, pi, or Codex) in its own terminal of Rex or Herdr, started by `istack-worker`. The user watches and steers workers from the multiplexer's sidebar, so istack never uses the Agent tool. `istack-worker` uses Rex when your session runs in a Rex terminal (`REX_BLOCK` is set) and Herdr otherwise (`HC_TERMINAL_ID`); `ISTACK_MUX=rex|herdr` overrides that. When the session is inside neither, or `istack-worker` cannot start a worker, stop and tell the user.
 
+## Running code on esh-orchestrator
+
+On esh-orchestrator, workers never run Docker, test stacks, evals or builds locally. From the worktree, `verify-remote --proof <script>` runs `/verify` and `verify-remote check` runs the CI checks, each on a throwaway exe.dev VM tagged `verify`. The VM is shared and small, and a local stack has run it out of memory and killed other workers. Put this rule in the brief of every worker that edits code.
+
 ## Roles
 
 `~/.claude/rules/istack-models.md` maps each role to one or more seats, written `<opus|sonnet|haiku|fable> <effort>`, `pi <provider/model> <effort>`, `codex <model> <effort>`, or `inherit-parent`. `istack-worker roles` prints every role with the command each seat runs. A panel role (`arena runners`, `architect runners`, `interrogate reviewers`) runs one worker per seat, picked with `--seat N` from 0. `/istack:setup-istack` writes the file.
