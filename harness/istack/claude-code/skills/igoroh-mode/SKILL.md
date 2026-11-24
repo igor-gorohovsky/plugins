@@ -119,7 +119,7 @@ Every subagent is a worker, started per [the workers doc](../../docs/workers.md)
 
 You own every worker's result. Review the diff and write your own summary. Don't pass through what it said. A second opinion is the same brief on a seat of another family. Agreement is high-signal.
 
-**Fresh workers by default.** Give new work to a fresh worker with consolidated scope: the original brief, every later directive, and the prior worker's report and branch. This holds for a fix round, a follow-up, a retry, and the next queue item. Message an existing worker with `hc send` only when the new work strictly needs state that lives in it: its uncommitted changes, or a process it still runs, such as a dev server or a babysit watcher. A stop or hold order to a running worker is not reuse. A role such as a PR owner outlives its worker. Once that worker reports, a fresh worker takes the role's next round.
+**Fresh workers by default.** Give new work to a fresh worker with consolidated scope: the original brief, every later directive, and the prior worker's report and branch. This holds for a fix round, a follow-up, a retry, and the next queue item. Message an existing worker with `istack-worker send` only when the new work strictly needs state that lives in it: its uncommitted changes, or a process it still runs, such as a dev server or a babysit watcher. A stop or hold order to a running worker is not reuse. A role such as a PR owner outlives its worker. Once that worker reports, a fresh worker takes the role's next round.
 
 ## Writing the reply
 

@@ -27,7 +27,7 @@ Infer the need from the message and the conversation. A named situation, such as
 Check the state that changes the answer, and mention it only when it does:
 
 - No `~/.claude/rules/istack-models.md`, or no `istack-worker` on the PATH, means `/istack:setup-istack` hasn't run, so every role uses `istack-worker`'s default seat.
-- No `HC_TERMINAL_ID` means Claude Code is not running inside Herdr, so no worker can start.
+- With neither `REX_BLOCK` nor `HC_TERMINAL_ID` set, Claude Code is not running inside Rex or Herdr, so no worker can start.
 - No `verify-*` skill or other app harness in the project means agents have no scripted way to drive the app. Mention `/create-verification-skill` when the question is about proving a change works.
 - No formal verification skill in the project means no property is checked past what tests reach. Mention `/create-formal-verification-skill` when the question is about a race, an invariant, or another case tests rarely hit. When one exists and the code it covers changed after the commit it records as last in sync, mention `/maintain-formal-verification-skill` if the question touches that code.
 
@@ -38,7 +38,7 @@ When the model rule is missing and it matters, ask whether the user wants to pic
 
 ## Get set up
 
-1. Install with `/plugin install istack@igor-plugins`, from the local marketplace at `~/projects/plugins`. Run Claude Code inside Herdr.
+1. Install with `/plugin install istack@igor-plugins`, from the local marketplace at `~/projects/plugins`. Run Claude Code inside Rex or Herdr.
 2. Run [`/istack:setup-istack`](../setup-istack/SKILL.md). It links `istack-worker`, asks for a reasoning budget, maps a seat (harness, model, effort) to each role, and writes `~/.claude/rules/istack-models.md`. Then it offers once each to generate a verification skill and a formal verification skill for the project, unless the project already has one.
 3. Start a real task with `/istack:igoroh-mode`, a goal, and a check that can pass or fail.
 
@@ -46,7 +46,7 @@ Installing changes nothing until the user invokes a skill. Only `/setup-istack` 
 
 If cost is the worry, say where the tokens go and how to spend fewer. istack spends extra tokens on workers and panels. Rerun `/istack:setup-istack` and pick a smaller budget or cheaper seats, such as a pi seat on a cheap model. A shorter panel list runs fewer workers, one for each seat. Save `/igoroh-mode` for work that needs rigor.
 
-istack runs in Claude Code inside Herdr. Each command takes the `istack:` prefix, such as `/istack:igoroh-mode`. Workers run as Herdr terminals on Claude Code, pi, or Codex, so the user can watch and steer them from the sidebar. Fixed-shape fan-outs run through the `istack:panel` workflow, which `/workflows` shows live. The [workers doc](../../docs/workers.md) has the details.
+istack runs in Claude Code inside Rex or Herdr. Each command takes the `istack:` prefix, such as `/istack:igoroh-mode`. Workers run as terminals of that multiplexer on Claude Code, pi, or Codex, so the user can watch and steer them from the sidebar. Fixed-shape fan-outs run through the `istack:panel` workflow, which `/workflows` shows live. The [workers doc](../../docs/workers.md) has the details.
 
 ## Start a task with `/igoroh-mode`
 
@@ -135,7 +135,7 @@ Principles are one-rule skills that `/igoroh-mode` reads and cites in its replie
 | The mode stopped applying after a few turns | Start each new task with `/istack:igoroh-mode`. |
 | A question got treated as the next step of the last task | Say "new task", or say the turn doesn't need the mode. |
 | A new model choice had no effect | Workers read `~/.claude/rules/istack-models.md` at launch. `istack-worker roles` shows what runs now. |
-| A worker sits `blocked` | It needs a person. `hc read <name>` shows its question. |
+| A worker sits `blocked` | It needs a person. `istack-worker read --name <name>` shows its question. |
 | Runs cost more than expected | See the cost paragraph under Get set up. |
 | A skill didn't load on its own | Only `/istack:setup-istack` loads from the user's words. The others load when the user types them or when `/igoroh-mode` runs them, and it doesn't run every skill. |
 | Parallel workers overwrote each other | Give each worker its own worktree as its `--cwd`. |

@@ -5,14 +5,14 @@ description: Configure which harness and model each istack role runs on, and at 
 
 # Setup istack
 
-istack runs its workers in Herdr, per [the workers doc](../../docs/workers.md). This skill writes the role table those workers read, `~/.claude/rules/istack-models.md`, and puts `istack-worker` on the PATH.
+istack runs its workers in Rex or Herdr, per [the workers doc](../../docs/workers.md). This skill writes the role table those workers read, `~/.claude/rules/istack-models.md`, and puts `istack-worker` on the PATH.
 
 ## Steps
 
 ### 1. Install and check
 
 1. Link the script: `ln -sf <istack>/scripts/istack-worker ~/.local/bin/istack-worker`, where `<istack>` is the folder that holds this skill's `skills/` folder. Check `istack-worker --help` runs.
-2. Check Herdr: `HC_TERMINAL_ID` is set and `hc ls` succeeds. If not, tell the user that istack needs Claude Code running inside Herdr, and finish the remaining steps anyway.
+2. Check the multiplexer: `REX_BLOCK` is set and `rex ls` succeeds (Rex), or `HC_TERMINAL_ID` is set and `hc ls` succeeds (Herdr). If neither, tell the user that istack needs Claude Code running inside Rex or Herdr, and finish the remaining steps anyway.
 
 ### 2. Detect the seats
 
