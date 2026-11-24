@@ -9,7 +9,7 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join, relative } from "node:path";
+import { dirname, join, posix, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -197,12 +197,35 @@ function recordTree(base, tree) {
   console.log(`harness/istack-patches: ${changed.length} patches, ${readTree(FILES).size} files`);
 }
 
+// Claude Code installs only this tree, so a relative link must resolve inside it. A patch that deletes a file can leave one dangling.
+function findDanglingLinks(tree) {
+  const has = (path) => tree.has(path) || [...tree.keys()].some((key) => key.startsWith(`${path}/`));
+  return [...tree].filter(([path]) => path.endsWith(".md")).flatMap(([path, { bytes }]) =>
+    [...bytes.toString("utf8").matchAll(/\]\(([^)\s]+)\)/g)]
+      .map(([, href]) => href)
+      .filter((href) => {
+        const target = href.replace(/[#?].*/, "");
+        return target && !/^[a-z][a-z0-9+.-]*:/i.test(target) && !has(posix.join(posix.dirname(path), target).replace(/\/$/, ""));
+      })
+      .map((href) => `harness/istack/${path} links to ${href}, which is not in the tree`),
+  );
+}
+
+function reportDanglingLinks(tree) {
+  const dangling = findDanglingLinks(tree);
+  for (const line of dangling) console.log(`FAIL ${line}`);
+  if (dangling.length > 0) process.exit(1);
+}
+
 const check = process.argv.includes("--check");
 execFileSync(process.execPath, [UPSTREAM_GENERATOR, ...(check ? ["--check"] : [])], { cwd: ROOT, stdio: "inherit" });
 if (process.argv.includes("--record")) {
   recordTree(buildBaseTree(), readTree(OUT));
+  reportDanglingLinks(readTree(OUT));
 } else if (check) {
-  const drifted = findDrift(buildTree().tree, readTree(OUT));
+  const { tree } = buildTree();
+  reportDanglingLinks(tree);
+  const drifted = findDrift(tree, readTree(OUT));
   for (const path of drifted.slice(0, 20)) console.log(`harness/istack/${path}`);
   if (drifted.length > 0) {
     console.log(`harness/istack is out of date. Run \`${COMMAND}\` and commit the result, or \`${COMMAND} --record\` to keep edits made there.`);
@@ -220,4 +243,5 @@ if (process.argv.includes("--record")) {
     process.exit(1);
   }
   if (merges.size > 0) recordTree(base, tree);
+  reportDanglingLinks(tree);
 }
