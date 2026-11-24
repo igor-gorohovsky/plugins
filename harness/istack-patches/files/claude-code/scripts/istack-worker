@@ -1,0 +1,495 @@
+#!/usr/bin/env python3
+"""Start istack workers as terminals of Rex or Herdr, one per role seat, and collect their reports.
+
+The multiplexer is Rex when the caller runs inside a Rex terminal (REX_BLOCK is set), else Herdr; ISTACK_MUX=rex|herdr
+overrides that. Under Rex a worker is a window (a tab) named after the worker, in the session given with --session or in
+the caller's own session.
+
+The role table lives in ~/.claude/rules/istack-models.md, one `role: entry, entry` line per role.
+An entry is `<claude-model> <effort>`, `pi <provider/model> <effort>`, `codex <model> <effort>`,
+or `inherit-parent` / `auto` (Claude Code on its default model).
+"""
+
+import argparse
+import json
+import os
+import re
+import subprocess
+import sys
+import time
+from abc import ABC, abstractmethod
+from pathlib import Path
+
+RULE_PATH = Path(os.environ.get("ISTACK_MODELS_RULE", "~/.claude/rules/istack-models.md")).expanduser()
+HC = os.environ.get("ISTACK_HC", "hc")
+REX = os.environ.get("ISTACK_REX", "rex")
+REX_WAIT_SCRIPT = Path(__file__).resolve().with_name("rex_wait_worker.lua")
+REX_STATE = Path(os.environ.get("ISTACK_REX_STATE", "~/.cache/istack/rex")).expanduser()
+SCREEN_TAIL_LINES = 40
+EFFORTS = ("low", "medium", "high", "xhigh", "max")
+CLAUDE_MODELS = ("opus", "sonnet", "haiku", "fable")
+PARENT_ALIASES = ("inherit-parent", "auto")
+WAIT_SLICE_SECONDS = 170
+STARTUP_POLL_SECONDS = float(os.environ.get("ISTACK_STARTUP_POLL_SECONDS", "2"))
+DEFAULT_ROLES = {
+    "feature, refactoring": "sonnet high",
+    "bug-fix": "sonnet high",
+    "perf-issue": "sonnet high",
+    "hillclimb": "sonnet high",
+    "judgment and prose": "opus high",
+    "hardest tasks": "opus high",
+    "how explorer": "sonnet high",
+    "how explainer": "opus high",
+    "why investigators": "sonnet high",
+    "why synthesizer": "opus high",
+    "reflect tooling": "sonnet high",
+    "reflect judgment, divergent, synthesizer": "opus high",
+    "arena runners": "opus high, sonnet high",
+    "arena cross-judge pool": "opus high",
+    "swarm workers": "sonnet high",
+    "architect runners": "opus high, sonnet high",
+    "interrogate reviewers": "opus high, sonnet high",
+}
+
+
+class WorkerError(Exception):
+    pass
+
+
+def parse_entry(text):
+    tokens = text.split()
+    if len(tokens) == 1 and tokens[0] in PARENT_ALIASES:
+        return {"spec": text, "harness": "claude", "model": None, "effort": None, "family": "claude"}
+    if len(tokens) == 3 and tokens[0] in ("pi", "codex") and tokens[2] in EFFORTS:
+        model = tokens[1]
+        family = re.split(r"[-:.0-9]", model.split("/")[-1], maxsplit=1)[0] or model
+        return {"spec": text, "harness": tokens[0], "model": model, "effort": tokens[2], "family": family}
+    if len(tokens) == 2 and tokens[0] in CLAUDE_MODELS and tokens[1] in EFFORTS:
+        return {"spec": text, "harness": "claude", "model": tokens[0], "effort": tokens[1], "family": "claude"}
+    raise WorkerError(f"cannot read role entry '{text}': use '<opus|sonnet|haiku|fable> <effort>', "
+                      f"'pi <provider/model> <effort>', 'codex <model> <effort>' or inherit-parent")
+
+
+def parse_role_lines(text):
+    roles = {}
+    for line in text.splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#") or stripped == "---" or ":" not in stripped:
+            continue
+        label, value = stripped.split(":", 1)
+        if label.strip() in ("description", "alwaysApply"):
+            continue
+        roles[label.strip()] = value.strip()
+    return roles
+
+
+def read_role_table():
+    table = {label: {"value": value, "source": "default"} for label, value in DEFAULT_ROLES.items()}
+    if RULE_PATH.exists():
+        for label, value in parse_role_lines(RULE_PATH.read_text()).items():
+            table[label] = {"value": value, "source": str(RULE_PATH)}
+    return table
+
+
+def find_role(table, role):
+    if role in table:
+        return table[role]
+    for label, row in table.items():
+        parts = [part.strip() for part in label.split(",")]
+        if role in parts or any(f"{parts[0].split()[0]} {part}" == role for part in parts[1:]):
+            return row
+    raise WorkerError(f"no line for role '{role}' in {RULE_PATH}; known roles: {', '.join(table)}")
+
+
+def resolve_role(role):
+    row = find_role(read_role_table(), role)
+    return [parse_entry(entry.strip()) for entry in row["value"].split(",") if entry.strip()]
+
+
+def build_command(entry, effort=None):
+    effort = effort or entry["effort"]
+    if entry["harness"] == "pi":
+        return ["pi", "--model", entry["model"], "--thinking", effort]
+    if entry["harness"] == "codex":
+        codex_effort = "xhigh" if effort == "max" else effort
+        return ["codex", "-m", entry["model"], "-c", f"model_reasoning_effort={codex_effort}"]
+    command = ["claude"]
+    if entry["model"]:
+        command += ["--model", entry["model"]]
+    if effort:
+        command += ["--effort", effort]
+    return command
+
+
+def convert_to_terminal_name(text):
+    name = re.sub(r"[^a-z0-9_-]+", "-", text.lower()).strip("-")[:32]
+    if not name:
+        raise WorkerError(f"'{text}' has no usable characters for a terminal name")
+    return name
+
+
+def compose_first_message(brief, report):
+    return (f"You are an istack worker. Read your brief at {brief} and do that work, inside its scope. "
+            f"When the work is done, write your complete final report to {report} in one write, then end your turn. "
+            f"Start other agents only when the brief assigns it.")
+
+
+def run_command(program, arguments):
+    """Run a multiplexer command and return its exit code and what it printed."""
+    completed = subprocess.run([program, *arguments], capture_output=True, text=True)
+    return completed.returncode, completed.stdout.strip() or completed.stderr.strip()
+
+
+def run_tool(program, arguments):
+    """Run a multiplexer command and return its exit code and its output, parsed as JSON when it is JSON."""
+    code, output = run_command(program, arguments)
+    try:
+        return code, json.loads(output) if output else {}
+    except json.JSONDecodeError:
+        return code, {"text": output}
+
+
+class Mux(ABC):
+    """The terminal multiplexer that workers run in. `program` is its command-line tool."""
+
+    def __init__(self, program):
+        self.program = program
+
+    @abstractmethod
+    def start_terminal(self, name, cwd, command, session):
+        """Start `command` in a new terminal called `name` and return what identifies it, with key "terminal"."""
+
+    @abstractmethod
+    def wait_for_turn(self, name, seconds, report_path):
+        """Wait up to `seconds`. Return "done", "blocked", "error" or "exited", or None while the worker still works."""
+
+    @abstractmethod
+    def read_screen(self, name):
+        """Return the last lines of the worker's screen."""
+
+    @abstractmethod
+    def send_text(self, name, text):
+        """Type `text` into the worker and submit it."""
+
+    @abstractmethod
+    def stop_terminal(self, name):
+        """Close the worker's terminal. Return True when it is gone."""
+
+    def _run(self, arguments):
+        return run_tool(self.program, arguments)
+
+
+class HerdrMux(Mux):
+    def start_terminal(self, name, cwd, command, session):
+        if session:
+            raise WorkerError("--session is for Rex; under Herdr a worker is a terminal of its own")
+        code, result = self._run(["run", "--bg", "--json", "--name", name, "--cwd", cwd, "--", *command])
+        if code != 0 or "address" not in result:
+            raise WorkerError(f"hc run failed for {name}: {json.dumps(result)}")
+        return {"terminal": result["address"]}
+
+    def wait_for_turn(self, name, seconds, report_path):
+        code, result = self._run(["wait", name, "--json", "--timeout", str(seconds)])
+        error = result.get("error", {})
+        if error.get("kind") == "finished" or result.get("reason") == "exit":
+            return "exited"
+        if error:
+            raise WorkerError(f"hc wait {name} failed: {json.dumps(error)}")
+        if result.get("status") == "idle" and not result.get("turn") and not report_path.exists():
+            time.sleep(STARTUP_POLL_SECONDS)
+            return None
+        if result.get("reason") == "status" and result.get("status") in ("done", "blocked", "error", "idle"):
+            return "done" if result["status"] == "idle" else result["status"]
+        return None
+
+    def read_screen(self, name):
+        code, screen = self._run(["read", name, "--lines", str(SCREEN_TAIL_LINES)])
+        return screen.get("text", json.dumps(screen))
+
+    def send_text(self, name, text):
+        code, result = self._run(["send", name, text])
+        if code != 0:
+            raise WorkerError(f"hc send {name} failed: {json.dumps(result)}")
+
+    def stop_terminal(self, name):
+        self._run(["kill", name])
+        code, result = self._run(["rm", name])
+        return code == 0
+
+
+class RexMux(Mux):
+    """A worker is a window labelled with the worker's name. Its one terminal block is the worker's address."""
+
+    def __init__(self, program, wait_script, state_dir):
+        super().__init__(program)
+        self.wait_script = wait_script
+        self.state_dir = state_dir
+
+    def start_terminal(self, name, cwd, command, session):
+        sessions = self._list_sessions()
+        if self._find_worker(name, sessions) is not None:
+            raise WorkerError(f"a Rex window named {name} is already open; stop that worker or pick another name")
+        self._locate_baseline(name).unlink(missing_ok=True)
+        options = ["--cwd", cwd, "--keep-open", "--json", "--", *command]
+        if session:
+            session_id = next((entry["session_id"] for entry in sessions if entry.get("label") == session), None)
+        else:
+            session_id = self._find_own_session()
+        if session_id is None:
+            code, result = self._run(["new", session, "--window", name, *options])
+            session_id = result.get("session_id")
+            window = (result.get("initial_windows") or [{}])[0]
+        else:
+            code, result = self._run(["window", "new", "-s", session_id, name, "--focus=false", *options])
+            window = result
+        if code != 0 or not window.get("block_ids"):
+            raise WorkerError(f"rex could not start {name}: {json.dumps(result)}")
+        return {"terminal": window["block_ids"][0], "session": session_id, "window": window["window_id"]}
+
+    def wait_for_turn(self, name, seconds, report_path):
+        worker = self._find_worker(name)
+        if worker is None:
+            return "exited"
+        baseline = self._locate_baseline(name)
+        after = baseline.read_text().strip() if baseline.exists() else ""
+        state = self._read_state(name, worker["block_id"], seconds, after)
+        # An agent that sits idle was interrupted or never started: its turn is over, as under Herdr.
+        return {"working": None, "idle": "done"}.get(state["status"], state["status"])
+
+    def read_screen(self, name):
+        worker = self._find_worker(name)
+        if worker is None:
+            return "(the worker's window is closed)"
+        # Read as text: a screen that happens to show JSON is still a screen.
+        code, screen = run_command(self.program, ["capture", "-b", worker["block_id"], "--trim"])
+        return "\n".join(screen.splitlines()[-SCREEN_TAIL_LINES:])
+
+    def send_text(self, name, text):
+        worker = self._find_worker(name)
+        if worker is None:
+            raise WorkerError(f"no Rex window is named {name}")
+        block = worker["block_id"]
+        # The record of the turn that ended before this message must not end the next wait. It is read before the
+        # message is typed and kept only once the message is in: a message that failed starts no turn to wait for.
+        turn_before = self._read_state(name, block, 0, "").get("at", "")
+        for arguments in (["send", "-b", block, text], ["send-key", "-b", block, "enter"]):
+            code, result = self._run(arguments)
+            if code != 0:
+                raise WorkerError(f"rex {arguments[0]} to {name} failed: {json.dumps(result)}")
+        self.state_dir.mkdir(parents=True, exist_ok=True)
+        self._locate_baseline(name).write_text(turn_before)
+
+    def stop_terminal(self, name):
+        self._locate_baseline(name).unlink(missing_ok=True)
+        worker = self._find_worker(name)
+        if worker is None:
+            return False
+        code, result = self._run(["window", "close", worker["window_id"], "-s", worker["session_id"]])
+        return code == 0
+
+    def _read_state(self, name, block_id, seconds, after):
+        """Run the wait script: the state that ends the worker's turn, or "working" after `seconds`."""
+        arguments = ["do", "-b", block_id, str(self.wait_script), f"timeout={seconds}"]
+        if after:
+            arguments.append(f"after={after}")
+        code, result = self._run(arguments)
+        if code != 0 or "status" not in result:
+            raise WorkerError(f"rex wait for {name} failed: {json.dumps(result)}")
+        return result
+
+    def _list_sessions(self):
+        code, result = self._run(["ls", "--json"])
+        if code != 0:
+            raise WorkerError(f"rex ls failed: {json.dumps(result)}")
+        return result.get("sessions", [])
+
+    def _find_own_session(self):
+        block = os.environ.get("REX_BLOCK")
+        if not block:
+            raise WorkerError("give --session: REX_BLOCK is unset, so this caller has no Rex session of its own")
+        code, result = self._run(["block", "inspect", block, "--json"])
+        if code != 0 or "session_id" not in result:
+            raise WorkerError(f"rex could not find the caller's session from REX_BLOCK={block}")
+        return result["session_id"]
+
+    def _find_worker(self, name, sessions=None):
+        """Find the window labelled `name` in any session. Rex has no listing of windows across sessions."""
+        found = []
+        for session in self._list_sessions() if sessions is None else sessions:
+            code, view = self._run(["window", "ls", "-s", session["session_id"], "--json"])
+            if code != 0:
+                # Only a session that ended since it was listed has no windows. Any other failure must not make a
+                # live worker look closed.
+                if any(entry["session_id"] == session["session_id"] for entry in self._list_sessions()):
+                    raise WorkerError(f"rex could not list the windows of session {session.get('label')}: "
+                                      f"{json.dumps(view)}")
+                continue
+            for window in view.get("windows", []):
+                blocks = [block for layer in window.get("layers", []) for block in layer.get("blocks", [])]
+                if window.get("label") == name and blocks:
+                    found.append({"session_id": session["session_id"], "window_id": window["window_id"],
+                                  "block_id": blocks[0]["block_id"]})
+        if len(found) > 1:
+            raise WorkerError(f"{len(found)} Rex windows are named {name}; close the old ones first")
+        return found[0] if found else None
+
+    def _locate_baseline(self, name):
+        return self.state_dir / f"{name}.after"
+
+
+def choose_mux():
+    name = os.environ.get("ISTACK_MUX")
+    if name is None:
+        if os.environ.get("REX_BLOCK"):
+            name = "rex"
+        elif os.environ.get("HC_TERMINAL_ID"):
+            name = "herdr"
+        else:
+            raise WorkerError("this session is inside neither Rex (REX_BLOCK) nor Herdr (HC_TERMINAL_ID), so no worker "
+                              "can be reached; set ISTACK_MUX=rex and give --session to start one from outside")
+    if name == "rex":
+        return RexMux(REX, REX_WAIT_SCRIPT, REX_STATE)
+    if name == "herdr":
+        return HerdrMux(HC)
+    raise WorkerError(f"ISTACK_MUX is '{name}': use rex or herdr")
+
+
+def choose_claude_entry(entry):
+    if entry["harness"] == "claude":
+        return entry
+    for seat in resolve_role("judgment and prose"):
+        if seat["harness"] == "claude":
+            return {**seat, "effort": entry["effort"]}
+    return parse_entry(f"opus {entry['effort']}")
+
+
+def write_brief(brief, brief_text, report_path):
+    if brief_text is None:
+        return Path(brief).resolve()
+    brief_path = report_path.with_name(report_path.stem + ".brief.md")
+    brief_path.write_text(brief_text)
+    return brief_path
+
+
+def start_worker(mux, role, seat, name, cwd, brief, report, effort, brief_text=None, claude=False, session=None):
+    entries = resolve_role(role)
+    if seat >= len(entries):
+        raise WorkerError(f"role '{role}' has {len(entries)} seat(s); seat {seat} does not exist")
+    if (brief is None) == (brief_text is None):
+        raise WorkerError("give exactly one of --brief and --brief-text")
+    # Rex starts a terminal whose directory is missing in the home directory, without an error.
+    cwd_path = Path(cwd).resolve()
+    if not cwd_path.is_dir():
+        raise WorkerError(f"--cwd {cwd_path} is not a directory")
+    report_path = Path(report).resolve()
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    report_path.unlink(missing_ok=True)
+    brief_path = write_brief(brief, brief_text, report_path)
+    if not brief_path.exists():
+        raise WorkerError(f"brief {brief_path} does not exist")
+    entry = choose_claude_entry(entries[seat]) if claude else entries[seat]
+    command = build_command(entry, effort) + [compose_first_message(brief_path, report_path)]
+    terminal_name = convert_to_terminal_name(name)
+    started = mux.start_terminal(terminal_name, str(cwd_path), command, session)
+    return {"name": terminal_name, **started, "spec": entry["spec"], "family": entry["family"], "report": str(report_path)}
+
+
+def describe_outcome(mux, name, report, status):
+    report_path = Path(report).resolve()
+    outcome = {"name": name, "status": status, "report": str(report_path), "report_exists": report_path.exists()}
+    if status == "done" and not outcome["report_exists"]:
+        outcome["status"] = "no-report"
+    if outcome["status"] != "done":
+        outcome["tail"] = mux.read_screen(name)[-3000:]
+    return outcome
+
+
+def wait_for_worker(mux, name, report, max_seconds):
+    deadline = time.monotonic() + max_seconds
+    while True:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            return {"name": name, "status": "working", "report": str(Path(report).resolve()), "report_exists": False}
+        status = mux.wait_for_turn(name, max(1, min(WAIT_SLICE_SECONDS, int(remaining))), Path(report))
+        if status is not None:
+            return describe_outcome(mux, name, report, status)
+
+
+def send_to_worker(mux, name, text):
+    mux.send_text(name, text)
+    return {"name": name, "sent": True}
+
+
+def read_worker(mux, name):
+    return {"name": name, "screen": mux.read_screen(name)}
+
+
+def stop_workers(mux, names):
+    return [{"name": name, "removed": mux.stop_terminal(name)} for name in names]
+
+
+def print_roles():
+    for label, row in read_role_table().items():
+        entries = [parse_entry(entry.strip()) for entry in row["value"].split(",") if entry.strip()]
+        print(f"{label}: " + "; ".join(" ".join(build_command(entry)) for entry in entries))
+
+
+def parse_arguments(argv):
+    parser = argparse.ArgumentParser(prog="istack-worker", description=__doc__.splitlines()[0])
+    commands = parser.add_subparsers(dest="command", required=True)
+    commands.add_parser("roles", help="print each role's seats and the command each seat runs")
+    start = commands.add_parser("start", help="start a worker")
+    start.add_argument("--role", required=True)
+    start.add_argument("--seat", type=int, default=0, help="which entry of a panel role, from 0")
+    start.add_argument("--name", required=True, help="terminal name, unique among live terminals")
+    start.add_argument("--session", help="Rex only: label of the session the worker's window goes to, created when "
+                                         "missing (a ticket: 'AG-287 short title'). Default: the caller's own session")
+    start.add_argument("--cwd", required=True)
+    start.add_argument("--brief", help="file holding the worker's task")
+    start.add_argument("--brief-text", help="the worker's task as text, saved beside the report")
+    start.add_argument("--claude", action="store_true",
+                       help="run on Claude Code even when the seat is another harness (MCP data, transcripts)")
+    start.add_argument("--report", required=True, help="file the worker writes its final report to")
+    start.add_argument("--effort", choices=EFFORTS, help="override the role's effort for this worker")
+    wait = commands.add_parser("wait", help="wait until a worker finishes its turn, then check its report")
+    wait.add_argument("--name", required=True)
+    wait.add_argument("--report", required=True)
+    wait.add_argument("--max-seconds", type=int, default=540)
+    send = commands.add_parser("send", help="type a message into a worker; the next wait is for the turn it starts")
+    send.add_argument("--name", required=True)
+    send.add_argument("text")
+    read = commands.add_parser("read", help="print the last lines of a worker's screen")
+    read.add_argument("--name", required=True)
+    stop = commands.add_parser("stop", help="kill and remove workers")
+    stop.add_argument("names", nargs="+")
+    return parser.parse_args(argv)
+
+
+def main(argv):
+    arguments = parse_arguments(argv)
+    try:
+        if arguments.command == "roles":
+            print_roles()
+            return 0
+        mux = choose_mux()
+        if arguments.command == "stop":
+            result = stop_workers(mux, arguments.names)
+        elif arguments.command == "wait":
+            result = wait_for_worker(mux, arguments.name, arguments.report, arguments.max_seconds)
+        elif arguments.command == "send":
+            result = send_to_worker(mux, arguments.name, arguments.text)
+        elif arguments.command == "read":
+            result = read_worker(mux, arguments.name)
+        else:
+            result = start_worker(mux, arguments.role, arguments.seat, arguments.name, arguments.cwd, arguments.brief,
+                                  arguments.report, arguments.effort, arguments.brief_text, arguments.claude,
+                                  arguments.session)
+    except WorkerError as error:
+        print(json.dumps({"error": str(error)}), file=sys.stderr)
+        return 2
+    print(json.dumps(result))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

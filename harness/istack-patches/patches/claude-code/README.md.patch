@@ -1,0 +1,158 @@
+diff --git a/claude-code/README.md b/claude-code/README.md
+index 7eadf29..47948be 100644
+--- a/claude-code/README.md
++++ b/claude-code/README.md
+@@ -4,49 +4,42 @@ i'm [poteto](https://x.com/poteto). i'm not a president or ceo, but i've worked
+ 
+ there's a growing sense that ai writes too much slop code. i agree. i don't want to ship like a team of twenty slop artists. throughput without quality is not a goal i aspire to. if you want to go fast, go deep first. 
+ 
+-**istack is my answer.** these are the same skills i use every day to ship high quality code at Cursor. this turns cursor into a real engineering team. the goal is not to maximize loc, in fact it's the opposite. istack helps you write less, but higher quality code.
++**istack is my answer.** these are the same skills i use every day to ship high quality code. this fork runs them in claude code inside herdr, so one chat runs a real engineering team. the goal is not to maximize loc, in fact it's the opposite. istack helps you write less, but higher quality code.
+ 
+ **istack gives you fearless parallelism.** when you can go deep on one agent and trust it to write good, verifiable code, you can truly parallelize with confidence. start multiple agents up with `igoroh-mode` and trust that they'll apply rigorous engineering principles to their work.
+ 
+-**cursor gives you the best of all worlds.** every frontier model has its strengths and weaknesses. use any model with istack. in fact, many of my skills use multi-model workflows to take advantage of each model's unique strengths.
++**herdr gives you the best of all worlds.** every frontier model has its strengths and weaknesses. istack runs each worker as a herdr terminal on claude code, pi, or codex, so any model can take any role, and panels mix model families on purpose. you watch and steer every worker from herdr's sidebar.
+ 
+ fork it. improve it. make it yours. PRs are welcome! 
+ 
+ ## install
+ 
+-```bash
+-/add-plugin istack
+-```
+-
+-in claude code:
++istack lives in the local `igor-plugins` marketplace at `~/projects/plugins`:
+ 
+ ```bash
+-/plugin marketplace add cursor/plugins
+-/plugin install istack@cursor-plugins
++/plugin install istack@igor-plugins
+ ```
+ 
+-claude code leaves auto-update off for third-party marketplaces, so istack stays on the version you installed. to turn it on, run `/plugin`, open the **marketplaces** tab, select `cursor-plugins`, and choose **enable auto-update**. to update once by hand, run `claude plugin update istack@cursor-plugins`.
++claude code prefixes plugin commands, so `/igoroh-mode` is `/istack:igoroh-mode`. the plugin loads from this checkout, so a commit here reaches new sessions at once. a running session picks it up with `/reload-plugins`.
+ 
+-claude code prefixes plugin commands and agents, so `/igoroh-mode` is `/istack:igoroh-mode`. the [claude code adapter](./docs/harness/claude-code.md) maps every other cursor name. in claude code, `/istack:setup-istack` writes your model choices to `~/.claude/rules/istack-models.md`, and a step that needs a cursor-only feature, such as bugbot or automations, is skipped with a one-line note.
+-
+-claude code installs a generated copy of istack, including this readme and the guide, from [`harness/istack/`](https://github.com/cursor/plugins/tree/main/harness/pstack) at the repository root. after you change istack, run `node scripts/generate-istack-harness-trees.mjs` from the repository root and commit the result. ci fails while the generated copy is out of date.
++istack needs claude code running inside herdr: workers are herdr terminals. [`docs/workers.md`](./docs/workers.md) says how they start, how panels run, and what happens without herdr.
+ 
+ ## get started
+ 
+ two steps:
+ 
+-1. run [`/setup-istack`](./skills/setup-istack/SKILL.md), pick a reasoning budget, and choose which models you want.
+-2. use [`/igoroh-mode`](./skills/igoroh-mode/SKILL.md) whenever you're doing anything that requires rigor.
++1. run [`/istack:setup-istack`](./skills/setup-istack/SKILL.md). it puts `istack-worker` on your path, asks for a reasoning budget, and writes a seat (harness, model, effort) for each role to `~/.claude/rules/istack-models.md`.
++2. use [`/istack:igoroh-mode`](./skills/igoroh-mode/SKILL.md) whenever you're doing anything that requires rigor.
+ 
+-new here? the [istack guide](./docs/guide/README.md) walks you through a first real task, from setup and prompting through verification and overnight runs. stuck, or unsure which skill fits? ask [`/igoroh-help`](./skills/igoroh-help/SKILL.md).
++new here? the [istack guide](./docs/guide/README.md) walks you through a first real task, from setup and prompting through verification and overnight runs. stuck, or unsure which skill fits? ask [`/istack:igoroh-help`](./skills/igoroh-help/SKILL.md).
+ 
+-that's it. the other skills are situational, and the mode skill uses them for you as needed. out of the box the mode splits work by model strength: code delegates (feature, refactoring, bug fix, perf, hillclimb) go to grok, while the hardest changes, prose, and judgment go to opus 5.5. the default panel is opus 5.5 / grok. [`/setup-istack`](./skills/setup-istack/SKILL.md) changes any of it.
++that's it. the other skills are situational, and the mode skill uses them for you as needed. the role table splits work by model strength: code delegates (feature, refactoring, bug fix, perf, hillclimb) go to a fast code seat, while the hardest changes, prose, and judgment go to opus. panels mix families. `istack-worker roles` prints what each role runs right now.
+ 
+ ## usage
+ 
+ use [`/igoroh-mode`](./skills/igoroh-mode/SKILL.md) at the start of a task. it reads your request, picks from a set of playbooks, and runs the other skills as the steps need them.
+ 
+-pick `/igoroh-mode` from the `/` menu before you type your task, so cursor attaches the skill to the message.
++type `/istack:igoroh-mode` before your task, so claude code loads the skill with the message.
+ 
+ ### just use [`/igoroh-mode`](./skills/igoroh-mode/SKILL.md)
+ 
+@@ -82,14 +75,14 @@ morning.
+ | [babysit](./skills/igoroh-mode/playbooks/babysit.md) | drive a pr or a stack to merge-ready: conflicts, review threads, ci. |
+ | [shipping](./skills/igoroh-mode/playbooks/shipping.md) | independently verify a green stack, then land the contiguous verified run bottom-up through github by default or origin when available. |
+ | [autonomous run](./skills/igoroh-mode/playbooks/autonomous-run.md) | drive a long task to completion without stopping. |
+-| [orchestrate](./skills/igoroh-mode/playbooks/orchestrate.md) | a standing project handed to one coordinator chat: multi-day, many stacked prs, fleets of subagents. |
++| [orchestrate](./skills/igoroh-mode/playbooks/orchestrate.md) | a standing project handed to one coordinator chat: multi-day, many stacked prs, fleets of workers. |
+ | [autopilot-full](./skills/igoroh-mode/playbooks/autopilot-full.md) | run independent prs to merged with one owner per pr. a swarm verifies each code-ready head, and every later change to the patch gets a fresh check. |
+ | [autopilot-stack](./skills/igoroh-mode/playbooks/autopilot-stack.md) | autopilot-full without the merge. build and verify prs for the operator to review and land, stacking a pr only on a pr it builds on. |
+ | [session pickup](./skills/igoroh-mode/playbooks/session-pickup.md) | resume or take over a prior agent's in-flight work. |
+ | [pause safely](./skills/igoroh-mode/playbooks/pause-safely.md) | suspend in-flight work cleanly so it can be resumed later. |
+ | [multi-phase plan](./skills/igoroh-mode/playbooks/multi-phase-plan.md) | work that spans phases or stacked PRs. |
+ | [worktree cleanup](./skills/igoroh-mode/playbooks/worktree-cleanup.md) | reclaim disk by pruning merged or abandoned worktrees and stale ios simulators, safety-gated. |
+-| [opening a pr](./skills/igoroh-mode/playbooks/opening-a-pr.md) | open a ready pr from small ordered commits with a conventional commits title and a briefing-style body. invoked at the end of every other playbook. |
++| [opening a pr](./skills/igoroh-mode/playbooks/opening-a-pr.md) | open a draft pr from small ordered commits, with a conventional commits title that carries the ticket id and a body from the `pr` skill. invoked at the end of every other playbook. |
+ 
+ </details>
+ 
+@@ -103,9 +96,9 @@ when invoked it:
+ 
+ the full rules and playbooks live in [`skills/igoroh-mode/SKILL.md`](./skills/igoroh-mode/SKILL.md).
+ 
+-to keep [`/igoroh-mode`](./skills/igoroh-mode/SKILL.md) on across turns, pick it from the `/` menu and press option+enter (mac) or alt+enter (windows) instead of enter. that makes it a [custom mode](https://cursor.com/docs/skills#using-a-skill-as-a-custom-mode), which cursor offers in the agents window and the cli. it stays in context every turn until you exit the mode. plain enter attaches it to one message only.
++the skill stays in the chat once loaded, but its pull fades over a long chat. start each new task with `/istack:igoroh-mode`.
+ 
+-[`/igoroh-mode`](./skills/igoroh-mode/SKILL.md) works extremely well with cursor's `/loop` command. you can make cursor work for many hours without sacrificing rigor.
++[`/igoroh-mode`](./skills/igoroh-mode/SKILL.md) works extremely well with claude code's `/loop`. you can make it work for many hours without sacrificing rigor.
+ 
+ ## skills
+ 
+@@ -139,7 +132,6 @@ to keep [`/igoroh-mode`](./skills/igoroh-mode/SKILL.md) on across turns, pick it
+ | [`/swarm`](./skills/swarm/SKILL.md) | you want N parallel workers across different slices or races, then one aggregated report. |
+ | [`/interrogate`](./skills/interrogate/SKILL.md) | you have a diff and want different models to try to break it, keeping only findings a run proves. |
+ | [`/automate-me`](./skills/automate-me/SKILL.md) | you want your own `-mode` skill, drafted from how you've actually worked. |
+-| [`/make-bot-ui`](./skills/make-bot-ui/SKILL.md) | you want a page or dashboard whose buttons wake a Grok Bot over a webhook, including the sender-key handoff and Tailscale. |
+ | [`/setup-istack`](./skills/setup-istack/SKILL.md) | you want to pick which models istack uses per role. detects your models and writes a config rule. |
+ | [`/reflect`](./skills/reflect/SKILL.md) | a long task landed and you want the recipe captured as a skill edit. |
+ | [`/correct`](./skills/correct/SKILL.md) | you keep correcting agents for the same mistakes. mines history for mistake classes, fixes each at the highest level that works (architecture, then types, lint, and ci, then tests, with docs last), and keeps a table pairing each rule with what enforces it. |
+@@ -210,15 +202,15 @@ help:              /igoroh-help which skill should i use to review this branch?
+ 
+ </details>
+ 
+-## the `igoroh-agent` and Comment Sicko subagents
++## workers and panels
+ 
+-[`/igoroh-mode`](./skills/igoroh-mode/SKILL.md) runs in the chat that receives it. that chat owns the playbook, the todo list, and every subagent spawn.
++[`/igoroh-mode`](./skills/igoroh-mode/SKILL.md) runs in the chat that receives it. that chat owns the playbook, the todo list, and every worker it starts.
+ 
+-istack also ships [`subagent_type: "igoroh-agent"`](./agents/igoroh-agent.md) as the wrapper for delegates spawned during a run. it reads `igoroh-mode` in full, including its inline principles index, before doing any work. substituting `generalPurpose` skips that read and drifts. do not spawn `igoroh-agent` to run the playbook itself.
++every subagent is a worker: an interactive claude code, pi, or codex session in its own herdr terminal, started by [`istack-worker`](./scripts/istack-worker) from a role in `~/.claude/rules/istack-models.md`. a code delegate's brief points it at `igoroh-mode`, so it reads the principles before it writes code. workers that read slack, notion, meetings, or session transcripts run on claude code, because that data stays on claude.
+ 
+-[`/igoroh-mode`](./skills/igoroh-mode/SKILL.md) and [`subagent_type: "igoroh-agent"`](./agents/igoroh-agent.md) route through the same wrapper.
++fan-outs (`/swarm`, `/arena`, `/interrogate`, `/how`, `/why`, `/reflect`) run as panels: the chat starts several workers at once, retries one that ends without a report, and then reruns their findings, starts a judge from another model family, or starts a synthesizer over the reports. you watch every worker in herdr's sidebar.
+ 
+-istack also ships [Comment Sicko](./agents/comment-sicko.md), a read-only comment reviewer available as `subagent_type: "comment-sicko"`. usually invoke it through [`/no-comments`](./skills/no-comments/SKILL.md), not directly.
++[Comment Sicko](./skills/no-comments/references/comment-sicko.md) is a comment reviewer that [`/no-comments`](./skills/no-comments/SKILL.md) runs as a worker, then audits its findings.
+ 
+ ## principles
+ 
+@@ -258,17 +250,13 @@ twenty-four short skills, one principle each. `igoroh-mode` indexes them inline
+ 
+ ## not shipped here
+ 
+-a few things `igoroh-mode` references but doesn't bundle:
+-
+-- `/deslop` and the `deslop` skill ship in the `cursor-team-kit` plugin.
+-- `control-cli` (for CLIs and TUIs) and `control-ui` (for browser, Electron, web) ship in `cursor-team-kit` too.
+-- `/create-skill` is a cursor built-in. cursor also ships a built-in `/autopilot` that watches a pr. inside `igoroh-mode`, pr-status requests go to the [babysit playbook](./skills/igoroh-mode/playbooks/babysit.md) instead.
+-
+-install `cursor-team-kit` alongside istack if you want the full set.
++- `/simplify` (the pre-commit cleanup) and `/loop` are claude code built-ins.
++- browser checks use the repo's `verify` skill or the `claude-in-chrome` skill. cli and tui checks run in an hc terminal.
++- skill authoring uses the `writing-for-agents` skill and `anthropic-skills:skill-creator`.
+ 
+ ## why are there no planning skills?
+ 
+-cursor already has a great plan mode which works great with istack. but personally, i don't believe in planning. the best spec is code. if you do want to make a plan, [`/igoroh-mode`](./skills/igoroh-mode/SKILL.md) covers it, but it's not a default. 
++claude code already has a plan mode which works great with istack. but personally, i don't believe in planning. the best spec is code. if you do want to make a plan, [`/igoroh-mode`](./skills/igoroh-mode/SKILL.md) covers it, but it's not a default. 
+ 
+ ## make it yours
+ 
+@@ -280,12 +268,6 @@ models are configurable too. type [`/setup-istack`](./skills/setup-istack/SKILL.
+ 
+ when a default changes, a rule written before the change still pins the old default. delete those role lines, or delete the file, then run `/setup-istack` again. a rerun keeps any role whose model differs from the default.
+ 
+-## automations
+-
+-istack also ships a dormant [benny automation pack](https://github.com/cursor/plugins/tree/main/pstack/automations/benny). benny triages slack issue reports, then reproduces and fixes confirmed bugs with real ui evidence. its files are not registered as slash skills.
+-
+-to set it up, point cursor at [`FOR_AGENTS.md`](https://github.com/cursor/plugins/blob/main/pstack/automations/benny/FOR_AGENTS.md). setup copies the pack into the target repository at `.cursor/automations/benny/`, enables istack there for shared skills, and keeps user configuration outside the copied pack. benny runs on cursor automations, so it is cursor-only.
+-
+ ## license
+ 
+ MIT

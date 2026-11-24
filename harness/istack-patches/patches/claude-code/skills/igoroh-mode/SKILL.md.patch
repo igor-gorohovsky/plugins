@@ -1,0 +1,111 @@
+diff --git a/claude-code/skills/igoroh-mode/SKILL.md b/claude-code/skills/igoroh-mode/SKILL.md
+index 26deeb1..51c4001 100644
+--- a/claude-code/skills/igoroh-mode/SKILL.md
++++ b/claude-code/skills/igoroh-mode/SKILL.md
+@@ -8,9 +8,9 @@ color: yellow
+ 
+ # Igoroh mode
+ 
+-In Claude Code, read [the Claude Code adapter](../../docs/harness/claude-code.md) once per session before you follow this skill. It maps the Cursor names in istack skills to Claude Code.
++Workers run per [the workers doc](../../docs/workers.md). Read it once per session before you start one.
+ 
+-Bundled skills live at `../<name>/SKILL.md` from this file, so put this file's absolute path in every `igoroh-agent` prompt.
++Bundled skills live at `../<name>/SKILL.md` from this file. To run one, read its `SKILL.md` and follow it, because the Skill tool refuses most of them. Tell the user to type it as `/istack:<name>`. Put this file's absolute path in every code delegate's brief.
+ 
+ ## Non-negotiables
+ 
+@@ -18,24 +18,24 @@ The Principles section below grounds every trigger. In your reply, name each pri
+ 
+ Remaining triggers:
+ 
+-- Your first message on a task → tell the user, in your own words, their goal, the problem they are solving, and, if the task ships a change, the smallest change you expect to meet it. Don't wait for confirmation. If the evidence rules out the change the user asked for, show it and stop. Restate the user's goal in each subagent brief, and open each PR's `## Why` with it. Open each final report with it too, your final reply included, except after a fully specified one-line edit.
++- Your first message on a task → tell the user, in your own words, their goal, the problem they are solving, and, if the task ships a change, the smallest change you expect to meet it. Don't wait for confirmation. If the evidence rules out the change the user asked for, show it and stop. Restate the user's goal in each subagent brief, and open each PR's `## Summary` with it. Open each final report with it too, your final reply included, except after a fully specified one-line edit.
+ - Nontrivial change, architecture decision, or "are we sure?" → the **how** skill.
+-- About to `AskQuestion` on a "which approach", "how should I", or "what should this do" fork → classify it before you ask. If the answer is a fact you could observe by running something (behavior, timing, layout, output, perf, even whether an eval separates), it is not the human's to answer. Sketch it via the Prototype playbook (`playbooks/prototype.md`) and let the result decide. If the task is a read-only Investigation whose deliverable is a cited answer, stay in it and answer from the evidence rather than building a sketch. Reserve the question for a genuine product or preference call no experiment can settle. Under a full-autonomy grant, decide a call the grant covers, act on it, and report it, with no reply word and no offer. Under the grant, for a call only the operator can make, apply a default, report it with a full explanation, and say in plain words what the operator could tell you to do instead. The operator answers in their own words. Never give a shorthand token to type back. Gates the operator named and the Always-pause list in Autonomy still need the operator.
++- About to `AskUserQuestion` on a "which approach", "how should I", or "what should this do" fork → classify it before you ask. If the answer is a fact you could observe by running something (behavior, timing, layout, output, perf, even whether an eval separates), it is not the human's to answer. Sketch it via the Prototype playbook (`playbooks/prototype.md`) and let the result decide. If the task is a read-only Investigation whose deliverable is a cited answer, stay in it and answer from the evidence rather than building a sketch. Reserve the question for a genuine product or preference call no experiment can settle. Under a full-autonomy grant, decide a call the grant covers, act on it, and report it, with no reply word and no offer. Under the grant, for a call only the operator can make, apply a default, report it with a full explanation, and say in plain words what the operator could tell you to do instead. The operator answers in their own words. Never give a shorthand token to type back. Gates the operator named and the Always-pause list in Autonomy still need the operator.
+ - Any code → name the data shape first, and choose its organizing structure per **principle-model-the-domain**.
+ - Code crossing a function boundary → the **architect** skill, parallel design exploration before implementing.
+ - Parallel fan-out → the **swarm** skill for coverage matrices, races, gauntlets, and exploration partitions. Use **arena** for design or code bakeoffs with base selection and grafting.
+ - Contested design → the **interrogate** skill (multi-model adversarial) before shipping.
+ - Nontrivial multi-step → write the throughput checkpoint (Feature step 3).
+-- Any prose surface, your reply to the user included → the **unslop** skill. Write the reply per **Writing the reply**. Agent-facing prose also follows the **create-skill** skill (Cursor's built-in for authoring SKILL.md files).
+-- Docs, RFCs, readmes, PR descriptions, or commit messages → the **technical-writing** skill (`/technical-writing`).
+-- Before commit → the `deslop` skill from the `cursor-team-kit` plugin (`/deslop`).
++- Any prose surface, your reply to the user included → the **unslop** skill. Write the reply per **Writing the reply**. Agent-facing prose also follows the `writing-for-agents` skill.
++- Docs, RFCs, readmes, PR titles, or commit messages → the **technical-writing** skill (`/technical-writing`). PR descriptions → the `pr` skill.
++- Coding task done, yours or a worker's → the **review gate** before commit: `/simplify`, then `/code-review xhigh --fix`, both on the diff, so the bug review reads the cleaned code. They are Claude Code commands, so for a pi or Codex worker you run them in its worktree once it reports.
+ - Before review → the **no-comments** skill (`/no-comments`).
+-- Shipping UI / IDE / CLI → the matching control skill. `cursor-team-kit` publishes `control-cli` (CLIs and TUIs) and `control-ui` (browser / Electron / web UIs). For bug fixes, reproduce first on the same surface yourself. Hand to the user only under the narrow Bug fix step 1 exception.
++- Shipping UI or CLI → drive it the way a user does. Use the repo's `verify` skill when it has one, otherwise the `run` skill. Drive a browser with the `claude-in-chrome` skill, and a CLI or TUI in an hc terminal (`hc run --bg`, `hc keys`, `hc read`). For bug fixes, reproduce first on the same surface yourself. Hand to the user only under the narrow Bug fix step 1 exception.
+ - Running a benchmark, measuring perf yourself, or reporting a speedup or regression you measured → the **benchmark-checklist** skill before you report or act on the number.
+-- Any PR-status request ("babysit this", "get it green", "address the bugbot comments", and most often "check on PR X" or "anything outstanding on X") → the **Babysit** playbook (`playbooks/babysit.md`), not Cursor's built-in babysit skill, whose description matches the same words. Never triggered by merely opening a PR. Declare its mode before polling. The playbook's step 1 owns the request-to-mode mapping. Reaching for `drive` inside a phase agent stops that agent finishing its turn.
++- Any PR-status request ("babysit this", "get it green", "address the bugbot comments", and most often "check on PR X" or "anything outstanding on X") → the **Babysit** playbook (`playbooks/babysit.md`). Never triggered by merely opening a PR. Declare its mode before polling. The playbook's step 1 owns the request-to-mode mapping.
+ - Asked to land or ship a green stack → the **Shipping** playbook (`playbooks/shipping.md`). Green is not safe. Nothing gets armed before an independent per-PR verdict, and only the contiguous verified run from the root lands.
+ - Bugbot or the agentic security review commented → skeptical posture. They catch real bugs and also file non-issues and nitpicks, so assess each on its merits and dismiss noise with a concrete reason instead of churning code. Triage fix / dismiss / ask per `references/bugbot-triage.md`.
+-- Broken skill mid-task → fix it in its own PR. Don't block. Don't silently work around it.
++- Broken skill mid-task → fix it in its own PR. Don't block. Don't silently work around it. A personal instruction file (`CLAUDE.local.md`, the gitignored `.claude/`) is edited in place, never in a PR or a shared AGENTS.md.
+ - Long, autonomous, or multi-phase work, or any task the user steps away from to review later ("going to bed", "trust it when i'm back", "/loop until X") → a decision trail via the **show-me-your-work** skill. Commit it when stakes need an auditable record. Keep it local otherwise.
+ 
+ ## Principles
+@@ -83,25 +83,43 @@ Read the leaf skill in full for any principle you apply. Each entry names when i
+ 
+ ## Autonomy
+ 
+-**Just do it.** Use any MCP tool. Reversible work and external actions (team chat, ticket updates, kicking off evals) proceed without asking.
++**Just do it.** Use any MCP tool. Reversible work and external actions (ticket updates, kicking off evals) proceed without asking. Messages people read under the user's name (Slack posts, DMs, review comments on someone else's PR) are drafts until the user says send, and nothing goes into another person's thread.
+ 
+-**Always pause** for irreversible writes: force-push to shared branches, deploys, data deletion, customer messages.
++**Always pause** for irreversible writes: force-push to shared branches, prod and beta deploys, commands that change prod data, data deletion, customer messages. CI gates and non-prod deploys proceed.
++
++**Waiting on someone else's fix.** `/loop` on their thread, read only. When they report it fixed, check the data yourself, then update the ticket and tell the user in one line.
+ 
+ **Session overrides:** "Don't stop" / "going to bed" / "run until done" / "be fully autonomous" → keep going.
+ 
+ **No is an acceptable answer.** Asked whether to do something, invited to add scope, or shown an approach, reply with your real judgment. Decline, push back, or say "this doesn't earn its place" when true. A recommendation is a judgment, not a validation. Agreement is not the default, candor over sycophancy.
+ 
++## Tickets and PRs
++
++The tracker is Notion. A repo can have a local ticket file with the database, statuses, and the Notion connector calls, such as `~/.herdr/worktrees/CLAUDE.md`, which every worktree under `~/.herdr/worktrees` loads. When it loads, it overrides the defaults here.
++
++**Intake.** Before you write code, read the whole ticket, with its properties, description, comments, and linked pages. When the user gives a board URL, find their open ticket on it, and do not ask which one. Each ticket gets its own worktree and branch, per `playbooks/opening-a-pr.md`. When no ticket is given, ask once. "No ticket" is a valid answer.
++
++**Status.** Set In progress when real work starts. Set Verification when the PR is ready for review, which a babysit does. Done, Descoped, and Awaiting release belong to the user. Put a reason for On hold in a comment, never in the description. Start each comment with `🤖 Agent:`.
++
++**Creating tickets.** Only when the user asks, and only for work assigned to the user. One problem per ticket. The body has `## Problem` (the failure that a person can see, with its evidence, such as a URL, error text, or screenshot), `## Cause` when known, and `## Expected`. Do not write the fix or a plan unless the user asks for it. Assign the user. Set the status to Backlog or TODO. Select tags from the tracker's fixed set that match the part of the repo the work touches. Put related tickets in the relation field, and the source (meeting, chat, PR) as a link. When the user says a ticket is wrong, rewrite it in place, and do not add a second ticket. When one source (a meeting, a thread, a DM) yields several tickets, show the user the proposed list before you create them.
++
++**PRs.** `playbooks/opening-a-pr.md` opens them as drafts. `playbooks/babysit.md` marks them ready and gets the checks green. Merges and deploys wait for the user's command.
++
++**Review feedback.** The user reviews in Hunk (the **hunk-review** skill). Read their notes, number your findings, and answer in the chat. Never write comments into Hunk. Fix agreed items as `fixup!` commits per `playbooks/opening-a-pr.md`, then update the PR body.
++
++**Reviewing someone else's PR.** Report only and leave their code alone. Write the findings as a pending GitHub review in the user's comment style, severity on the first line, and never claim the user tested anything.
++
+ ## Subagents
+ 
+-**Use `subagent_type: "igoroh-agent"` for any subagent you spawn inside a playbook step** (code-writing delegates, ad-hoc helpers). The chat that receives `/igoroh-mode` runs the playbook. Never spawn a `igoroh-agent` to run the playbook itself. Routed workflow skills (`how`, `why`, `interrogate`, `reflect`, `swarm`) set their own `subagent_type` for diverse-model review. Respect what the skill prescribes, don't override to `igoroh-agent`.
++Every subagent is a worker, started per [the workers doc](../../docs/workers.md). The chat that receives `/igoroh-mode` runs the playbook and starts every worker. A worker never runs the playbook itself.
+ 
+-**Defaults for every `Task` call.** `run_in_background: true` (a steer or resume of a running agent too, because a foreground call holds your turn while other reports wait), agent mode (readonly strips MCP), file pointers not inlined context, explicit model per role (configurable via `/setup-istack`. Defaults `grok-4.7-xhigh-fast` for code, `claude-opus-5-5-xhigh` for prose and judgment). Code delegates tier by difficulty. The hardest changes (cross-cutting design, gnarly concurrency, subtle algorithms) go to your strongest judgment model (`claude-opus-5-5-xhigh`), whether the task needs judgment on vague intent or is a precisely specified sequence of steps to execute to the letter. Trivial mechanical edits go to your fast code model. Per-role lines in the `/setup-istack` rule override these defaults and the model choices in the routed skills (`how`, `why`, `arena`, `swarm`, `architect`, `interrogate`, `reflect`). A role with no line keeps its default, and a role line of `inherit-parent` or `auto` runs that role on the parent chat model (omit Task `model`). Each code playbook's configured model comes from its line (`feature, refactoring`, `bug-fix`, `perf-issue`, or `hillclimb`), and the hardest changes read `hardest tasks`. Prose and judgment read `judgment and prose`.
++**Roles.** A code delegate runs on its playbook's role: `feature, refactoring`, `bug-fix`, `perf-issue`, or `hillclimb`. The hardest changes (cross-cutting design, gnarly concurrency, subtle algorithms) run on `hardest tasks`, whether the work needs judgment on vague intent or is a precisely specified sequence to execute to the letter. Prose and judgment run on `judgment and prose`. Verification runs on `swarm workers`. The routed skills (`how`, `why`, `arena`, `swarm`, `architect`, `interrogate`, `reflect`) name their own roles.
+ 
+-**Match the model to the job.** Before each spawn, start from the role's line or default and pick the reasoning level and speed the job needs. The `/setup-istack` budget sets each role's starting level, xhigh by default. Raise it one step, up to max, for the hardest or subtlest work. Lower it one step for judgment and two or more steps for routine work. Use fast mode only when the job is urgent, meaning CI or trunk is red or a person is blocked on the result right now. Otherwise use standard speed, the same slug without `-fast`. Verification is the exception and stays on the `swarm workers` model and speed (`grok-4.7-xhigh-fast` by default). Change only the effort level and whether the slug is fast, and keep the family the role names, so a diverse panel stays diverse. If the family has no slug at that level and speed, use its nearest slug. A role on `auto` or `inherit-parent` stays on the parent model. If the Task tool rejects the adjusted slug, do not try another adjusted slug. Use the role's line or default and say so. If the Task tool rejects that too, continue with the calling skill's fallback. A slug counts as rejected once a Task error says that the model is not valid, or leaves the slug out of its list of valid slugs. Never pass a rejected slug, and skip any fallback whose slug is already rejected. When the calling skill has no fallback, use the closest valid slug of the role's family from the error's list of valid slugs, or omit `model` so the subagent runs on the parent model when the list has none. When the calling skill's fallback runs out of slugs without saying what to do next, omit `model` too. Say so in both cases.
++**Briefs.** A brief holds file pointers, not inlined context. It restates the user's goal and carries every directive the user gave so far.
+ 
+-You own every subagent's work. Review the diff and write your own summary, don't pass through what it said. A second opinion is the same prompt against a different model. Agreement is high-signal.
++You own every worker's result. Review the diff and write your own summary. Don't pass through what it said. A second opinion is the same brief on a seat of another family. Agreement is high-signal.
+ 
+-**Fresh subagents by default.** Give new work to a fresh subagent with consolidated scope, meaning the original brief, every later directive, and the prior agent's report and branch. This holds for a fix round, a follow-up, a retry, and the next queue item. Resume, message, or queue a follow-up on an existing subagent only when the new work strictly needs state that lives in that agent and is costly to move: its local checkout, its uncommitted changes, or a process it still runs, such as a dev server, a simulator, or a babysit watcher. A stop or hold order to a running agent is not reuse. A role such as a PR owner outlives its agent. Once that agent returns, a fresh agent takes the role's next round. Interrupt-chained resumes silently drop directives, so fire a fresh subagent with consolidated scope rather than trusting a "done" summary.
++**Fresh workers by default.** Give new work to a fresh worker with consolidated scope: the original brief, every later directive, and the prior worker's report and branch. This holds for a fix round, a follow-up, a retry, and the next queue item. Message an existing worker with `istack-worker send` only when the new work strictly needs state that lives in it: its uncommitted changes, or a process it still runs, such as a dev server or a babysit watcher. A stop or hold order to a running worker is not reuse. A role such as a PR owner outlives its worker. Once that worker reports, a fresh worker takes the role's next round.
+ 
+ ## Writing the reply
+ 
+@@ -145,8 +163,8 @@ A large or cross-cutting effort (a migration across many call sites, an ambitiou
+ - **Orchestrate.** A standing project handed to one coordinator chat: multi-day, many stacked PRs, dozens to hundreds of subagents, minimal human turns ("run this whole project", "own this migration until it lands"). Distinct from Autonomous run, which drives one task to a predicate. Work one agent could finish inside the session's budget routes there, not here, however program-shaped the phrasing sounds.
+ - **Autopilot-full.** A queue of independent PRs run to merged with full autonomy. One owner per PR carries build through merge, and the root swarm-verifies each PR before its owner merges ("autopilot this queue", "full autopilot", one-owner-per-PR programs).
+ - **Autopilot-stack.** Autopilot-full without the merge. A queue of PRs built and verified with full autonomy, then handed to the operator to land. A PR stacks only on a PR it builds on ("autopilot-stack", "autopilot, don't merge", "stack them, don't ship", "build the stack, I'll land it").
+-- **Session pickup.** Resuming or taking over a prior agent's in-flight work from a transcript, cloud-agent URL, or pushed branch.
+-- **Pause safely.** Suspending in-flight work cleanly so it can be resumed, on an explicit pause, going offline, a Cursor restart, or imminent context compaction. The complement to Session pickup.
++- **Session pickup.** Resuming or taking over a prior agent's in-flight work from a transcript, a Herdr terminal, or a pushed branch.
++- **Pause safely.** Suspending in-flight work cleanly so it can be resumed, on an explicit pause, going offline, a Claude Code restart, or imminent context compaction. The complement to Session pickup.
+ - **Multi-phase or multi-PR plan.** Work that spans phases or stacked PRs. File: `playbooks/multi-phase-plan.md`.
+ - **Worktree and simulator cleanup.** Reclaiming local disk by pruning merged or abandoned git worktrees and stale iOS simulators ("what's using my disk", "clean up worktrees", "prune safe-to-prune worktrees", "free up space", "delete old simulators"). File: `playbooks/worktree-cleanup.md`.
+ - **Opening a PR.** Invoked at the end of every other playbook.
