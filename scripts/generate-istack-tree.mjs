@@ -114,19 +114,17 @@ function listPatches() {
 }
 
 // Reversing the patch on istack's version of the file gives the old upstream file, the base of a three-way merge.
-function mergeUpstreamChange(path, patch, base, onDisk) {
-  const ours = onDisk.get(path);
-  const old = runInTempDir(new Map([[path, ours]]), (dir) => (applyPatch(dir, patch, true) ? readFileSync(join(dir, path)) : undefined));
-  if (!old) throw new Error(`harness/istack-patches/patches/${path}.patch does not apply, and harness/istack/${path} does not match it either. Run --record first.`);
-  if (!base.has(path)) return { entry: ours, conflict: "upstream removed this file. istack's version is kept" };
-  const merged = runInTempDir(new Map([["ours", ours], ["old", { bytes: old, executable: false }], ["upstream", base.get(path)]]), (dir) =>
-    spawnSync("git", ["merge-file", "-p", "-L", "istack", "-L", "old upstream", "-L", "new upstream", "ours", "old", "upstream"], { cwd: dir }),
-  );
-  if (merged.status === null || merged.status > 127) throw new Error(`git merge-file failed on ${path}`);
-  return {
-    entry: { bytes: merged.stdout, executable: ours.executable },
-    conflict: merged.status > 0 ? `${merged.status} conflicts with the upstream change` : undefined,
-  };
+function mergeUpstreamChange(path, patch, base, ours) {
+  return runInTempDir(new Map([[path, ours], ["ours", ours]]), (dir) => {
+    if (!applyPatch(dir, patch, true)) throw new Error(`harness/istack-patches/patches/${path}.patch does not apply, and harness/istack/${path} does not match it either. Run --record first.`);
+    if (!base.has(path)) return { entry: ours, message: "upstream removed this file. istack's version is kept", conflict: true };
+    writeTree(dir, new Map([["upstream", base.get(path)]]));
+    const merged = spawnSync("git", ["merge-file", "-p", "-L", "istack", "-L", "old upstream", "-L", "new upstream", "ours", path, "upstream"], { cwd: dir });
+    if (merged.status === null || merged.status > 127) throw new Error(`git merge-file failed on ${path}`);
+    const conflict = merged.status > 0;
+    const message = conflict ? `${merged.status} conflicts with the upstream change` : "merged the upstream change";
+    return { entry: { bytes: merged.stdout, executable: ours.executable }, message, conflict };
+  });
 }
 
 // Without onDisk, a patch that does not apply stops the run. With it, the upstream change is merged into the file on disk.
@@ -137,12 +135,14 @@ function applyPatches(base, onDisk) {
       if (applyPatch(dir, patch)) continue;
       const path = relative(PATCHES, patch).replace(/\.patch$/, "");
       if (!onDisk) throw new Error(`harness/istack-patches/patches/${path}.patch does not apply. Run \`${COMMAND}\` to merge the upstream change.`);
-      const merge = onDisk.has(path)
-        ? mergeUpstreamChange(path, patch, base, onDisk)
-        : { note: "upstream changed a file that istack deletes. istack still deletes it" };
+      if (!onDisk.has(path)) {
+        merges.set(path, { message: "upstream changed a file that istack deletes. istack still deletes it", conflict: false });
+        rmSync(join(dir, path), { force: true });
+        continue;
+      }
+      const merge = mergeUpstreamChange(path, patch, base, onDisk.get(path));
       merges.set(path, merge);
-      if (merge.entry) writeTree(dir, new Map([[path, merge.entry]]));
-      else rmSync(join(dir, path), { force: true });
+      writeTree(dir, new Map([[path, merge.entry]]));
     }
     return readTree(dir);
   });
@@ -174,32 +174,32 @@ function findDrift(tree, onDisk) {
 // Rewrites harness/istack-patches from the tree: a patch for each upstream file it changes or deletes, and a copy of each file upstream lacks.
 function recordTree(base, tree) {
   const changed = [...base.keys()].filter((path) => !isSame(base.get(path), tree.get(path)));
-  const diff = runInTempDir(base, (dir) => {
+  const own = new Map([...tree].filter(([path]) => !base.has(path)));
+  const patches = runInTempDir(new Map(changed.map((path) => [path, base.get(path)])), (dir) => {
     execFileSync("git", ["init", "-q"], { cwd: dir });
     execFileSync("git", ["add", "-A"], { cwd: dir });
     for (const path of changed) {
       if (tree.has(path)) writeTree(dir, new Map([[path, tree.get(path)]]));
       else rmSync(join(dir, path));
     }
-    return execFileSync("git", ["diff", "--binary", "--no-renames"], { cwd: dir, maxBuffer: 1 << 30 }).toString("utf8");
+    return changed.map((path) => [path, execFileSync("git", ["diff", "--binary", "--no-renames", "--", path], { cwd: dir, maxBuffer: 1 << 30 })]);
   });
-  const patches = new Map(diff.split(/^(?=diff --git )/m).filter(Boolean).map((patch) => [patch.match(/^diff --git a\/(.*) b\//)[1], patch]));
   rmSync(PATCHES, { recursive: true, force: true });
   rmSync(FILES, { recursive: true, force: true });
-  writeTree(FILES, new Map([...tree].filter(([path]) => !base.has(path))));
-  for (const path of changed) {
-    if (!patches.has(path)) throw new Error(`git diff has no patch for ${path}`);
+  writeTree(FILES, own);
+  for (const [path, patch] of patches) {
     mkdirSync(dirname(join(PATCHES, path)), { recursive: true });
-    writeFileSync(join(PATCHES, `${path}.patch`), patches.get(path));
+    writeFileSync(join(PATCHES, `${path}.patch`), patch);
   }
-  const drifted = findDrift(buildTree().tree, tree);
+  const drifted = findDrift(addOwnFiles(applyPatches(base).tree), tree);
   if (drifted.length > 0) throw new Error(`harness/istack-patches does not reproduce harness/istack: ${drifted.join(", ")}`);
-  console.log(`harness/istack-patches: ${changed.length} patches, ${readTree(FILES).size} files`);
+  console.log(`harness/istack-patches: ${changed.length} patches, ${own.size} files`);
 }
 
 // Claude Code installs only this tree, so a relative link must resolve inside it. A patch that deletes a file can leave one dangling.
 function findDanglingLinks(tree) {
-  const has = (path) => tree.has(path) || [...tree.keys()].some((key) => key.startsWith(`${path}/`));
+  const dirs = new Set([...tree.keys()].flatMap((path) => path.split("/").slice(0, -1).map((_, index, parts) => parts.slice(0, index + 1).join("/"))));
+  const has = (path) => tree.has(path) || dirs.has(path);
   return [...tree].filter(([path]) => path.endsWith(".md")).flatMap(([path, { bytes }]) =>
     [...bytes.toString("utf8").matchAll(/\]\(([^)\s]+)\)/g)]
       .map(([, href]) => href)
@@ -220,8 +220,9 @@ function reportDanglingLinks(tree) {
 const check = process.argv.includes("--check");
 execFileSync(process.execPath, [UPSTREAM_GENERATOR, ...(check ? ["--check"] : [])], { cwd: ROOT, stdio: "inherit" });
 if (process.argv.includes("--record")) {
-  recordTree(buildBaseTree(), readTree(OUT));
-  reportDanglingLinks(readTree(OUT));
+  const onDisk = readTree(OUT);
+  recordTree(buildBaseTree(), onDisk);
+  reportDanglingLinks(onDisk);
 } else if (check) {
   const { tree } = buildTree();
   reportDanglingLinks(tree);
@@ -237,7 +238,7 @@ if (process.argv.includes("--record")) {
   rmSync(OUT, { recursive: true, force: true });
   writeTree(OUT, tree);
   console.log(`harness/istack: ${tree.size} files`);
-  for (const [path, { conflict, note }] of merges) console.log(`harness/istack/${path}: ${conflict ?? note ?? "merged the upstream change"}`);
+  for (const [path, { message }] of merges) console.log(`harness/istack/${path}: ${message}`);
   if ([...merges.values()].some(({ conflict }) => conflict)) {
     console.log(`Resolve the files above in harness/istack, then run \`${COMMAND} --record\`.`);
     process.exit(1);
