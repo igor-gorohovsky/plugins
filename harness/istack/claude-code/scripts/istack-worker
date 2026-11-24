@@ -262,6 +262,8 @@ class RexMux(Mux):
             return "(the worker's window is closed)"
         # Read as text: a screen that happens to show JSON is still a screen.
         code, screen = run_command(self.program, ["capture", *self._address(worker), "--trim"])
+        if code != 0:
+            return f"(rex could not read the worker's screen: {screen})"
         return "\n".join(screen.splitlines()[-SCREEN_TAIL_LINES:])
 
     def send_text(self, name, text):
@@ -271,7 +273,8 @@ class RexMux(Mux):
         # The record of the turn that ended before this message must not end the next wait. It is read before the
         # message is typed and kept only once the message is in: a message that failed starts no turn to wait for.
         turn_before = self._read_state(name, worker, 0, "").get("at", "")
-        for arguments in (["send", *self._address(worker), text], ["send-key", *self._address(worker), "enter"]):
+        # "--" ends Rex's options, so a message that starts with "-" is typed instead of read as a flag.
+        for arguments in (["send", *self._address(worker), "--", text], ["send-key", *self._address(worker), "enter"]):
             code, result = self._run(arguments)
             if code != 0:
                 raise WorkerError(f"rex {arguments[0]} to {name} failed: {json.dumps(result)}")

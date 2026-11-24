@@ -1,6 +1,6 @@
 # istack harness tree
 
-This folder is generated from `harness/pstack/claude-code` by `node scripts/generate-istack-tree.mjs`. Do not edit it by hand.
+This folder is generated from `harness/pstack/claude-code` by `node scripts/generate-istack-tree.mjs`. An edit made here is kept only once `node scripts/generate-istack-tree.mjs --record` saves it to `harness/istack-patches`.
 
 The script runs the upstream generator, then copies the tree here and renames `pstack` to `istack` and `poteto` to `igoroh` in paths and text. URLs and the author credit keep their upstream spelling. Then it applies istack's own changes from `harness/istack-patches`:
 

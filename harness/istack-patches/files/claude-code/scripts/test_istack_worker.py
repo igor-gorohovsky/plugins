@@ -243,8 +243,14 @@ FAKE_REX = FAKE_TOOL_START + textwrap.dedent("""\
         print(json.dumps({"session_id": "session:own"}))
     elif arguments[0] == "do":
         answer_wait("do")
+    elif arguments[0] == "send" and arguments[-1].startswith("-") and "--" not in arguments:
+        print(f"Error: unknown shorthand flag: ' ' in {arguments[-1]}")
+        sys.exit(2)
     elif arguments[0] == "send" and os.environ.get("FAKE_SEND_FAILS"):
         print("Error: no such block")
+        sys.exit(1)
+    elif arguments[0] == "capture" and os.environ.get("FAKE_CAPTURE_FAILS"):
+        print("Error: request timed out")
         sys.exit(1)
     elif arguments[0] == "capture":
         print(os.environ.get("FAKE_SCREEN", "rex screen tail"))
@@ -354,6 +360,10 @@ class RexWorkerTest(FakeMuxTestCase):
         self.assertEqual(baseline_read[-1], "timeout=0")
         self.assertEqual(wait[-1], "after=T1")
 
+    def test_send_types_a_message_that_starts_with_a_dash(self):
+        code, result = self.run_worker(["send", "--name", "impl", "- and the tests"], [{"json": {"status": "done", "at": "T1"}}])
+        self.assertEqual((code, result["sent"]), (0, True))
+
     def test_a_failed_send_leaves_the_next_wait_on_the_current_turn(self):
         waits = [{"json": {"status": "done", "at": "T1"}}]
         code, result = self.run_worker(["send", "--name", "impl", "one more thing"], waits, REX_BLOCK="block:esh",
@@ -371,6 +381,10 @@ class RexWorkerTest(FakeMuxTestCase):
     def test_read_returns_a_screen_of_json_as_text(self):
         code, result = self.run_worker(["read", "--name", "impl"], REX_BLOCK="block:esh", FAKE_SCREEN="[1, 2]")
         self.assertEqual(result, {"name": "impl", "screen": "[1, 2]"})
+
+    def test_a_failed_capture_is_not_shown_as_the_screen(self):
+        code, result = self.run_worker(["read", "--name", "impl"], REX_BLOCK="block:esh", FAKE_CAPTURE_FAILS="1")
+        self.assertEqual(result["screen"], "(rex could not read the worker's screen: Error: request timed out)")
 
     def test_stop_closes_the_workers_window(self):
         code, result = self.run_worker(["stop", "impl", "gone"])

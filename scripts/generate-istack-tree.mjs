@@ -20,6 +20,8 @@ const PATCHES = join(ROOT, "harness", "istack-patches", "patches");
 const FILES = join(ROOT, "harness", "istack-patches", "files");
 const TREE = "claude-code";
 const COMMAND = "node scripts/generate-istack-tree.mjs";
+// Edits made in harness/istack before an upstream change can be recorded only once harness/istack has that change.
+const SET_EDITS_ASIDE = `set them aside with \`git stash push -- harness/istack\`, run \`${COMMAND}\` and commit, then run \`git stash pop\` and \`${COMMAND} --record\`.`;
 
 // Order matters: each pair runs on the text left by the pairs before it.
 const RENAMES = [
@@ -33,7 +35,7 @@ const PROTECTED = /https?:\/\/[^\s)>`"'\]]+|\[poteto\]\(/g;
 
 const README = `# istack harness tree
 
-This folder is generated from \`harness/pstack/claude-code\` by \`${COMMAND}\`. Do not edit it by hand.
+This folder is generated from \`harness/pstack/claude-code\` by \`${COMMAND}\`. An edit made here is kept only once \`${COMMAND} --record\` saves it to \`harness/istack-patches\`.
 
 The script runs the upstream generator, then copies the tree here and renames \`pstack\` to \`istack\` and \`poteto\` to \`igoroh\` in paths and text. URLs and the author credit keep their upstream spelling. Then it applies istack's own changes from \`harness/istack-patches\`:
 
@@ -106,17 +108,38 @@ function runInTempDir(tree, action) {
 
 function applyPatch(dir, patch, reverse = false) {
   const args = ["apply", "--whitespace=nowarn", ...(reverse ? ["-R"] : []), patch];
-  return spawnSync("git", args, { cwd: dir }).status === 0;
+  const result = spawnSync("git", args, { cwd: dir, encoding: "utf8" });
+  return { ok: result.status === 0, reason: (result.stderr || String(result.error ?? "")).trim() };
 }
 
 function listPatches() {
   return existsSync(PATCHES) ? listFiles(PATCHES).filter((path) => path.endsWith(".patch")).sort() : [];
 }
 
+function locatePatchedFile(patch) {
+  return relative(PATCHES, patch).replace(/\.patch$/, "");
+}
+
+function listGitPaths(args) {
+  const listing = execFileSync("git", [...args, "-z", "--", OUT], { cwd: ROOT, encoding: "utf8" });
+  return listing.split("\0").filter(Boolean);
+}
+
+// Paths under harness/istack that differ from the last commit: edits, resolved merges, and files an earlier run wrote.
+function listUncommittedPaths() {
+  return new Set(listGitPaths(["status", "--porcelain", "--untracked-files=all", "--no-renames"]).map((entry) => relative(OUT, join(ROOT, entry.slice(3)))));
+}
+
+// Untracked files that git ignores under harness/istack, such as a .venv or a log: junk, not istack's own files.
+function listIgnoredPaths() {
+  return listGitPaths(["ls-files", "--others", "--ignored", "--exclude-standard"]).map((path) => relative(OUT, join(ROOT, path)));
+}
+
 // Reversing the patch on istack's version of the file gives the old upstream file, the base of a three-way merge.
 function mergeUpstreamChange(path, patch, base, ours) {
   return runInTempDir(new Map([[path, ours], ["ours", ours]]), (dir) => {
-    if (!applyPatch(dir, patch, true)) throw new Error(`harness/istack-patches/patches/${path}.patch does not apply, and harness/istack/${path} does not match it either. Run --record first.`);
+    const reversed = applyPatch(dir, patch, true);
+    if (!reversed.ok) throw new Error(`harness/istack-patches/patches/${path}.patch does not apply to upstream, and harness/istack/${path} has edits that the patch lacks. To keep them, ${SET_EDITS_ASIDE}\n${reversed.reason}`);
     if (!base.has(path)) return { entry: ours, message: "upstream removed this file. istack's version is kept", conflict: true };
     writeTree(dir, new Map([["upstream", base.get(path)]]));
     const merged = spawnSync("git", ["merge-file", "-p", "-L", "istack", "-L", "old upstream", "-L", "new upstream", "ours", path, "upstream"], { cwd: dir });
@@ -132,9 +155,10 @@ function applyPatches(base, onDisk) {
   const merges = new Map();
   const tree = runInTempDir(base, (dir) => {
     for (const patch of listPatches()) {
-      if (applyPatch(dir, patch)) continue;
-      const path = relative(PATCHES, patch).replace(/\.patch$/, "");
-      if (!onDisk) throw new Error(`harness/istack-patches/patches/${path}.patch does not apply. Run \`${COMMAND}\` to merge the upstream change.`);
+      const applied = applyPatch(dir, patch);
+      if (applied.ok) continue;
+      const path = locatePatchedFile(patch);
+      if (!onDisk) throw new Error(`harness/istack-patches/patches/${path}.patch does not apply. Run \`${COMMAND}\` to merge the upstream change.\n${applied.reason}`);
       if (!onDisk.has(path)) {
         merges.set(path, { message: "upstream changed a file that istack deletes. istack still deletes it", conflict: false });
         rmSync(join(dir, path), { force: true });
@@ -177,12 +201,13 @@ function recordTree(base, tree) {
   const own = new Map([...tree].filter(([path]) => !base.has(path)));
   const patches = runInTempDir(new Map(changed.map((path) => [path, base.get(path)])), (dir) => {
     execFileSync("git", ["init", "-q"], { cwd: dir });
-    execFileSync("git", ["add", "-A"], { cwd: dir });
+    // --force and the diff options keep the user's ignore rules and diff settings out of the patches.
+    execFileSync("git", ["add", "-A", "--force"], { cwd: dir });
     for (const path of changed) {
       if (tree.has(path)) writeTree(dir, new Map([[path, tree.get(path)]]));
       else rmSync(join(dir, path));
     }
-    return changed.map((path) => [path, execFileSync("git", ["diff", "--binary", "--no-renames", "--", path], { cwd: dir, maxBuffer: 1 << 30 })]);
+    return changed.map((path) => [path, execFileSync("git", ["diff", "--binary", "--no-renames", "--no-color", "--no-ext-diff", "--no-textconv", "--src-prefix=a/", "--dst-prefix=b/", "--", path], { cwd: dir, maxBuffer: 1 << 30 })]);
   });
   rmSync(PATCHES, { recursive: true, force: true });
   rmSync(FILES, { recursive: true, force: true });
@@ -194,6 +219,24 @@ function recordTree(base, tree) {
   const drifted = findDrift(addOwnFiles(applyPatches(base).tree), tree);
   if (drifted.length > 0) throw new Error(`harness/istack-patches does not reproduce harness/istack: ${drifted.join(", ")}`);
   console.log(`harness/istack-patches: ${changed.length} patches, ${own.size} files`);
+}
+
+// Files with no uncommitted edit that the patch layer builds differently on the current upstream: harness/istack lacks an
+// upstream change, and --record would write patches that undo it.
+function findStalePaths(base, onDisk, uncommitted) {
+  const unapplied = new Set();
+  const tree = runInTempDir(base, (dir) => {
+    for (const patch of listPatches()) if (!applyPatch(dir, patch).ok) unapplied.add(locatePatchedFile(patch));
+    return readTree(dir);
+  });
+  for (const [path, entry] of readTree(FILES)) tree.set(path, entry);
+  // A file whose patch no longer applies went through the merge path, where a conflict resolved in istack's favour
+  // looks just like a stale file, so the check leaves it out.
+  return findDrift(tree, onDisk).filter((path) => !uncommitted.has(path) && !unapplied.has(path));
+}
+
+function describePaths(paths) {
+  return paths.length > 20 ? `${paths.slice(0, 20).join(", ")} and ${paths.length - 20} more` : paths.join(", ");
 }
 
 // Claude Code installs only this tree, so a relative link must resolve inside it. A patch that deletes a file can leave one dangling.
@@ -222,9 +265,13 @@ execFileSync(process.execPath, [UPSTREAM_GENERATOR, ...(check ? ["--check"] : []
 if (process.argv.includes("--record")) {
   // --record rewrites the patch layer from harness/istack, so an edit made in the layer and not yet generated would be lost.
   const pending = execFileSync("git", ["status", "--porcelain", "--", dirname(PATCHES)], { cwd: ROOT, encoding: "utf8" });
-  if (pending) throw new Error(`harness/istack-patches has uncommitted changes that --record would overwrite. Run \`${COMMAND}\` to apply them, commit, then edit harness/istack.\n${pending}`);
+  if (pending) throw new Error(`harness/istack-patches has uncommitted changes that --record would overwrite:\n${pending}If an earlier --record or run of this script made them, commit them and run --record again. If you edited harness/istack-patches by hand, run \`${COMMAND}\` to apply them, then commit.`);
+  const base = buildBaseTree();
   const onDisk = readTree(OUT);
-  recordTree(buildBaseTree(), onDisk);
+  for (const path of listIgnoredPaths()) if (!base.has(path)) onDisk.delete(path);
+  const stale = findStalePaths(base, onDisk, listUncommittedPaths());
+  if (stale.length > 0) throw new Error(`harness/istack lacks the upstream change to ${describePaths(stale)}, and --record would write patches that undo it. Run \`${COMMAND}\` first, then --record. If harness/istack also has edits of yours, ${SET_EDITS_ASIDE}`);
+  recordTree(base, onDisk);
   reportDanglingLinks(onDisk);
 } else if (check) {
   const { tree } = buildTree();
@@ -237,7 +284,12 @@ if (process.argv.includes("--record")) {
   }
   console.log("harness/istack is up to date.");
 } else {
-  const { base, tree, merges } = buildTree(readTree(OUT));
+  const onDisk = readTree(OUT);
+  const { base, tree, merges } = buildTree(onDisk);
+  // A merged file carries its edits into the result. Any other edit that the patch layer lacks would be lost.
+  const uncommitted = listUncommittedPaths();
+  const dropped = findDrift(tree, onDisk).filter((path) => uncommitted.has(path) && !merges.has(path));
+  if (dropped.length > 0) throw new Error(`harness/istack has edits that harness/istack-patches lacks, and this run would drop them: ${describePaths(dropped)}. Keep them with \`${COMMAND} --record\`. If an earlier run of this script wrote them, discard them with \`git checkout -- harness/istack\` and \`git clean -fd -- harness/istack\`, then run it again.`);
   rmSync(OUT, { recursive: true, force: true });
   writeTree(OUT, tree);
   console.log(`harness/istack: ${tree.size} files`);

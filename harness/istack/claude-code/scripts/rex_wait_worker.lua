@@ -1,6 +1,8 @@
 -- rex_wait_worker.lua: wait until one worker's turn ends. istack-worker runs it under Rex.
 --
---   rex do -b <block id> rex_wait_worker.lua [timeout=540] [after=<updated_at>]
+--   rex do -s <session id> -b <block id> rex_wait_worker.lua [timeout=540] [after=<updated_at>]
+--
+-- -s is needed when the block is in another session than the caller's: Rex looks for it only there.
 --
 -- Returns {"status": "done" | "blocked" | "error" | "idle" | "exited" | "working", ...}; "working" means the timeout
 -- passed. "idle" is an agent that has sat at its prompt for a while: the user interrupted it, or it never started.
