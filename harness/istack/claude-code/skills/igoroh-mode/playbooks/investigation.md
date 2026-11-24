@@ -4,9 +4,9 @@
 
 Investigation requests are read-only. They produce a cited explanation or a recommendation, not a code change.
 
-1. Route through the **how** skill. For motivation questions, also route through the **why** skill.
+1. Trace the code the question is about. For motivation questions, also route through the **why** skill.
 2. Throughput checkpoint stays one line: `throughput checkpoint: n/a, read-only investigation`.
-3. Produce the `how`-shaped output (Overview / Key Concepts / How It Works / Where Things Live / Gotchas), or a recommendation with a tradeoffs table if the request is a decision between alternatives.
+3. Produce the output (Overview / Key Concepts / How It Works / Where Things Live / Gotchas), or a recommendation with a tradeoffs table if the request is a decision between alternatives.
 4. When the answer is a number (a cost, a rate, a saving), measure it on the live system rather than estimate it. Each number carries its source (query, dashboard, log). A cost is in money per month next to the raw figure, per region and combined.
 5. Apply the **unslop** skill to the reply.
 

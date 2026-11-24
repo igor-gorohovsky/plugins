@@ -1,9 +1,9 @@
 diff --git a/claude-code/docs/harness/claude-code.md b/claude-code/docs/harness/claude-code.md
 deleted file mode 100644
-index 08da84e..0000000
+index a4d5cff..0000000
 --- a/claude-code/docs/harness/claude-code.md
 +++ /dev/null
-@@ -1,67 +0,0 @@
+@@ -1,68 +0,0 @@
 -# istack in Claude Code
 -
 -istack skills use Cursor names. In Claude Code, read this file once per session, then map each Cursor name in a skill with the tables below. `<istack>` means the folder that holds `skills/` and `docs/`. If a Cursor field has no row, drop it and say so. Never pass a field or value the tool schema rejects.
@@ -14,7 +14,7 @@ index 08da84e..0000000
 -| --- | --- |
 -| `Task` | `Agent` |
 -| `AskQuestion` | `AskUserQuestion`. In `-p` mode it is absent, so ask in plain text. |
--| Open a todolist | Use `TodoWrite` if the session offers it. Otherwise keep the list in your reply and update it at each phase. |
+-| Open a todolist, or copy steps into the todolist tool | Use `TodoWrite` if the session offers it. Otherwise keep the list in your reply and update it at each phase. |
 -| Run another istack skill (`/name` or "the **name** skill") | `Read` `<istack>/skills/<name>/SKILL.md` and follow it. The `Skill` tool refuses most istack skills. When you tell the user to type it, write `/istack:<name>`. |
 -| `Grep`, `Glob` | `Bash` with `rg` when the session has no `Grep` or `Glob`. |
 -
@@ -24,6 +24,7 @@ index 08da84e..0000000
 -| --- | --- |
 -| `subagent_type: generalPurpose` | `subagent_type: "general-purpose"` |
 -| `igoroh-agent`, `comment-sicko` | `istack:igoroh-agent`, `istack:comment-sicko` |
+-| The `model:` line in `igoroh-agent`'s file | It holds a Cursor slug. Pass `model` and `effort` on every `Agent` call that spawns `istack:igoroh-agent`, mapped with the Models table, so that slug never reaches the API. |
 -| `readonly: true` | `subagent_type: "Explore"`. It keeps `Bash`, so the brief also says "do not edit files", and you check `git status` afterward. |
 -| `readonly: false` | `general-purpose`. It keeps the session's MCP servers. |
 -| `environment: "cloud"` | `isolation: "worktree"`. Name the branch or commit the worker checks out. |
@@ -38,7 +39,7 @@ index 08da84e..0000000
 -| Cursor | Claude Code |
 -| --- | --- |
 -| `claude-<family>-<version>-<effort>[-fast]`, such as `claude-opus-5-5-xhigh` | `model: "opus"` and `effort: "xhigh"`. `model` takes only `opus`, `sonnet`, `haiku`, `fable`. Drop `-fast`. |
--| A `grok-*`, `gpt-*`, or other non-Claude slug | Omit `model` so the agent runs on the session model, and say so. |
+-| A `gemini-*` or other non-Claude slug | Omit `model` so the agent runs on the session model, and say so. |
 -| `auto` or `inherit-parent` | Omit `model`. |
 -| The `istack-models.mdc` rule, `~/.cursor/rules/istack-models.mdc` | `~/.claude/rules/istack-models.md`. Claude Code loads it into every new session, so its role lines are already in context. If they are not, read the file. If the file or the role's line is missing, use the skill's default slug. |
 -| A role value `<model> <effort>`, such as `opus high` | `model: "opus"` and `effort: "high"`. |
@@ -48,7 +49,7 @@ index 08da84e..0000000
 -Claude Code loads every `.md` file in `~/.claude/rules/` into each new session, so `setup-istack` writes its rule there. Follow its steps with these changes:
 -
 -- Detect. The detected models are the `model` values that the `Agent` tool schema lists, each with an effort from its `effort` values. Write a real model as `<model> <effort>`, such as `opus xhigh`. The effort is the last token, so the budget step works as written.
--- Defaults. Map each default slug with the rows above: `claude-opus-5-5-xhigh` is `opus xhigh`, and `grok-4.7-xhigh-fast` is `inherit-parent`.
+-- Defaults. Map each default slug with the rows above: `claude-opus-5-5-xhigh-fast` is `opus xhigh`, `claude-opus-5-5-high-fast` is `opus high`, `claude-fable-5-2-high` is `fable high`, and `gemini-4-neon-xhigh` is `inherit-parent`.
 -- Write. Write `~/.claude/rules/istack-models.md` with no frontmatter, then the comment lines, the `# budget` line, and one line per role from step 5. Overwrite the whole file. Never put the role lines in `CLAUDE.md` or `AGENTS.md`.
 -
 -## Paths

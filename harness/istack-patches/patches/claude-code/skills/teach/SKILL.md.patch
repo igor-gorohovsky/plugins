@@ -1,5 +1,5 @@
 diff --git a/claude-code/skills/teach/SKILL.md b/claude-code/skills/teach/SKILL.md
-index 4483748..25b048a 100644
+index bc6664d..36f47b2 100644
 --- a/claude-code/skills/teach/SKILL.md
 +++ b/claude-code/skills/teach/SKILL.md
 @@ -6,7 +6,7 @@ disable-model-invocation: true

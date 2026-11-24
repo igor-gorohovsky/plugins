@@ -1,8 +1,8 @@
 diff --git a/claude-code/docs/guide/04-design.md b/claude-code/docs/guide/04-design.md
-index 05073d4..2d7d8fa 100644
+index 31ea4c5..09eed64 100644
 --- a/claude-code/docs/guide/04-design.md
 +++ b/claude-code/docs/guide/04-design.md
-@@ -1,38 +1,40 @@
+@@ -1,32 +1,34 @@
  # Design before you write code
  
 -One attempt at a hard design locks in the first shape the model thought of. `/architect` settles types and boundaries before implementation. `/arena` runs several attempts at the same brief and merges the best parts. `/interrogate` has other models try to break the result. When the job is coverage rather than design synthesis, `/swarm` fans out slices or races and aggregates their results.
@@ -22,18 +22,11 @@ index 05073d4..2d7d8fa 100644
 +/istack:architect design the import pipeline before writing any code. i care most about how callers use it.
  ```
  
--[`/architect`](../../skills/architect/SKILL.md) grounds itself first, running `/how` over the code the design touches and `/why` when it moves ownership or layers. Then it runs `/arena` to produce competing design sketches, with the caller's usage written first in each, followed by types, signatures, and a module map.
-+[`/istack:architect`](../../skills/architect/SKILL.md) grounds itself first, running `/istack:how` over the code the design touches and `/istack:why` when it moves ownership or layers. Then it runs `/istack:arena` to produce competing design sketches, with the caller's usage written first in each, followed by types, signatures, and a module map.
+-[`/architect`](../../skills/architect/SKILL.md) traces every system the change touches first. Then it sketches two different shapes, each with types, signatures, and module boundaries, and picks the one where each piece of state has one owner, each task has one way to do it, and callers need to know least. For a large or contested design, it runs `/arena` instead of sketching alone. If you want to see the design before any code, say so in the prompt.
++[`/istack:architect`](../../skills/architect/SKILL.md) traces every system the change touches first. Then it sketches two different shapes, each with types, signatures, and module boundaries, and picks the one where each piece of state has one owner, each task has one way to do it, and callers need to know least. For a large or contested design, it runs `/istack:arena` instead of sketching alone. If you want to see the design before any code, say so in the prompt.
  
- By default it proceeds straight from the synthesized design into implementation. If you want to see the design first, say so:
- 
- ```text
--/architect with checkpoint. stop and show me before implementing.
-+/istack:architect with checkpoint. stop and show me before implementing.
- ```
- 
--The design isn't sacred once code starts. If implementation shows the same workaround in unrelated places, or types that only compile with `any` or forced casts, `/architect` treats that as proof the design is wrong. It scraps the sketch and starts over instead of patching around it.
-+The design isn't sacred once code starts. If implementation shows the same workaround in unrelated places, or types that only compile with `any` or forced casts, `/istack:architect` treats that as proof the design is wrong. It scraps the sketch and starts over instead of patching around it.
+-The design isn't sacred once code starts. If the same workaround keeps coming back, `/architect` redesigns instead of patching around it.
++The design isn't sacred once code starts. If the same workaround keeps coming back, `/istack:architect` redesigns instead of patching around it.
  
 -## Fan out attempts with `/arena`
 +## Fan out attempts with `/istack:arena`
@@ -43,7 +36,7 @@ index 05073d4..2d7d8fa 100644
 +/istack:arena take my prompt to the arena verbatim. i want to compare their proposals with yours.
  ```
  
--[`/arena`](../../skills/arena/SKILL.md) is the general tool underneath. N subagents attempt the same design or code brief in parallel, each writing to its own worktree or directory. A read-only judge from a different model family scores every candidate against a rubric. When no model from another family can run, the coordinator skips the judge and picks the base itself. The coordinator reads each candidate end to end, picks a base, grafts in the best ideas from the losers, and verifies the result.
+-[`/arena`](../../skills/arena/SKILL.md) is the general tool underneath. N subagents attempt the same design or code brief in parallel, each writing to its own worktree or directory. A read-only judge from a different model vendor scores every candidate against a rubric. When no model from another vendor can run, the coordinator skips the judge and picks the base itself. The coordinator reads each candidate end to end, picks a base, grafts in the best ideas from the losers, and verifies the result.
 +[`/istack:arena`](../../skills/arena/SKILL.md) is the general tool underneath. N workers attempt the same design or code brief in parallel, each in its own git worktree, so no two of them edit the same files. A read-only judge from a different model family scores every candidate against a rubric. When no seat from another family can run, the panel skips the judge and you pick the base yourself. You read each candidate end to end, pick a base, graft in the best ideas from the losers, and verify the result.
  
  ```mermaid
@@ -53,7 +46,7 @@ index 05073d4..2d7d8fa 100644
      B --> C[Candidate 1]
      B --> D[Candidate 2]
      B --> E[Candidate N]
-@@ -44,29 +46,29 @@ flowchart LR
+@@ -38,29 +40,29 @@ flowchart LR
      H --> I[Verify]
  ```
  
@@ -92,7 +85,7 @@ index 05073d4..2d7d8fa 100644
  
  Read the Dropped list too. You can override the verdict.
  
-@@ -75,35 +77,35 @@ Read the Dropped list too. You can override the verdict.
+@@ -69,35 +71,35 @@ Read the Dropped list too. You can override the verdict.
  Never take the first design. Ask for a few, and pick from evidence you can see:
  
  ```text
@@ -134,8 +127,8 @@ index 05073d4..2d7d8fa 100644
 +/istack:igoroh-mode turn this design into a plan. small verifiable PRs, each with its own verification steps.
  ```
  
- The [Multi-phase plan playbook](../../skills/igoroh-mode/playbooks/multi-phase-plan.md) settles any remaining open questions by prototype, then writes one section per PR, each ending in proof that the change works. A passing test suite alone doesn't count as that proof. The plan is the deliverable. The playbook doesn't implement it, and it names which execution playbook should run it next.
-@@ -111,7 +113,7 @@ The [Multi-phase plan playbook](../../skills/igoroh-mode/playbooks/multi-phase-p
+ The [Multi-phase plan playbook](../../skills/igoroh-mode/playbooks/multi-phase-plan.md) settles any remaining open questions by prototype, then writes one section per PR, each ending in proof that the change works. A passing test suite alone doesn't count as that proof. The plan is the deliverable. The playbook doesn't implement it, and execution starts only when you say go.
+@@ -105,7 +107,7 @@ The [Multi-phase plan playbook](../../skills/igoroh-mode/playbooks/multi-phase-p
  For a migration, state the bar in the prompt:
  
  ```text
@@ -144,16 +137,16 @@ index 05073d4..2d7d8fa 100644
  ```
  
  "bugs included" keeps the migration from quietly fixing things on the way, which would make the old and new output impossible to compare. For a project that spans many days, you can commit the plan to the repo for a while so other agents see the work in progress. Delete it when the work lands.
-@@ -120,14 +122,14 @@ For a migration, state the bar in the prompt:
+@@ -114,14 +116,14 @@ For a migration, state the bar in the prompt:
  
  You might be wondering whether every change needs this. No. Most changes need none of it. A rough ladder:
  
 -- A small, finished change you're unsure about needs `/interrogate` alone.
--- A change that crosses function boundaries or moves ownership earns `/architect`, which brings `/arena` with it.
+-- A change that crosses function boundaries or moves ownership earns `/architect`, which brings `/arena` with it when the design is large or contested.
 -- A standalone decision where independent attempts would help, like naming, formats, or an algorithm, is `/arena` directly.
 -- A coverage matrix, set of parallel checks, or race with declared arms is `/swarm`.
 +- A small, finished change you're unsure about needs `/istack:interrogate` alone.
-+- A change that crosses function boundaries or moves ownership earns `/istack:architect`, which brings `/istack:arena` with it.
++- A change that crosses function boundaries or moves ownership earns `/istack:architect`, which brings `/istack:arena` with it when the design is large or contested.
 +- A standalone decision where independent attempts would help, like naming, formats, or an algorithm, is `/istack:arena` directly.
 +- A coverage matrix, set of parallel checks, or race with declared arms is `/istack:swarm`.
  - An open question you could answer by running something, like a layout, a timing, or an approach, gets a prototype, not a debate.

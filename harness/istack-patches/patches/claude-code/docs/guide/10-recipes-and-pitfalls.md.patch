@@ -1,5 +1,5 @@
 diff --git a/claude-code/docs/guide/10-recipes-and-pitfalls.md b/claude-code/docs/guide/10-recipes-and-pitfalls.md
-index 32fd3be..deae278 100644
+index 042bd8c..deae278 100644
 --- a/claude-code/docs/guide/10-recipes-and-pitfalls.md
 +++ b/claude-code/docs/guide/10-recipes-and-pitfalls.md
 @@ -7,7 +7,7 @@ Prompts worth copying, then the mistakes everyone makes once. Swap in your own p
@@ -164,7 +164,7 @@ index 32fd3be..deae278 100644
  
  ## The pitfalls
  
--- **Enumerating skills in the prompt.** "use /how then /architect then /arena" reorders steps the playbook already sequences. State the goal and constraints. Name a skill only to override a default.
+-- **Enumerating skills in the prompt.** "use /architect then /arena then /interrogate" reorders steps the playbook already sequences. State the goal and constraints. Name a skill only to override a default.
 +- **Enumerating skills in the prompt.** "use /istack:how then /istack:architect then /istack:arena" reorders steps the playbook already sequences. State the goal and constraints. Name a skill only to override a default.
  - **A vague finish condition.** "make it better" gives `/loop` nothing to check. Give a command or artifact that can pass or fail.
  - **Leading with your theory of the cause.** The agent searches wherever you pointed. Ask it to restate the problem first, then share your hunch.

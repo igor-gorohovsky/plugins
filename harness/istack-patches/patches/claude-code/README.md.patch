@@ -1,5 +1,5 @@
 diff --git a/claude-code/README.md b/claude-code/README.md
-index 7eadf29..47948be 100644
+index 2fa88a2..445b4d4 100644
 --- a/claude-code/README.md
 +++ b/claude-code/README.md
 @@ -4,49 +4,42 @@ i'm [poteto](https://x.com/poteto). i'm not a president or ceo, but i've worked
@@ -51,7 +51,7 @@ index 7eadf29..47948be 100644
 -new here? the [istack guide](./docs/guide/README.md) walks you through a first real task, from setup and prompting through verification and overnight runs. stuck, or unsure which skill fits? ask [`/igoroh-help`](./skills/igoroh-help/SKILL.md).
 +new here? the [istack guide](./docs/guide/README.md) walks you through a first real task, from setup and prompting through verification and overnight runs. stuck, or unsure which skill fits? ask [`/istack:igoroh-help`](./skills/igoroh-help/SKILL.md).
  
--that's it. the other skills are situational, and the mode skill uses them for you as needed. out of the box the mode splits work by model strength: code delegates (feature, refactoring, bug fix, perf, hillclimb) go to grok, while the hardest changes, prose, and judgment go to opus 5.5. the default panel is opus 5.5 / grok. [`/setup-istack`](./skills/setup-istack/SKILL.md) changes any of it.
+-that's it. the other skills are situational, and the mode skill uses them for you as needed. out of the box, code delegates (feature, refactoring, bug fix, perf, hillclimb), prose, and judgment go to opus 5.5 at xhigh, and no role runs above xhigh. outside a review panel, fable 5.2 runs only when you name it or after two opus 5.5 runs of the same brief fail. the default panel is fable 5.2 / opus 5.5 / gemini 4 neon. [`/setup-istack`](./skills/setup-istack/SKILL.md) changes any of it.
 +that's it. the other skills are situational, and the mode skill uses them for you as needed. the role table splits work by model strength: code delegates (feature, refactoring, bug fix, perf, hillclimb) go to a fast code seat, while the hardest changes, prose, and judgment go to opus. panels mix families. `istack-worker roles` prints what each role runs right now.
  
  ## usage
@@ -63,15 +63,7 @@ index 7eadf29..47948be 100644
  
  ### just use [`/igoroh-mode`](./skills/igoroh-mode/SKILL.md)
  
-@@ -82,14 +75,14 @@ morning.
- | [babysit](./skills/igoroh-mode/playbooks/babysit.md) | drive a pr or a stack to merge-ready: conflicts, review threads, ci. |
- | [shipping](./skills/igoroh-mode/playbooks/shipping.md) | independently verify a green stack, then land the contiguous verified run bottom-up through github by default or origin when available. |
- | [autonomous run](./skills/igoroh-mode/playbooks/autonomous-run.md) | drive a long task to completion without stopping. |
--| [orchestrate](./skills/igoroh-mode/playbooks/orchestrate.md) | a standing project handed to one coordinator chat: multi-day, many stacked prs, fleets of subagents. |
-+| [orchestrate](./skills/igoroh-mode/playbooks/orchestrate.md) | a standing project handed to one coordinator chat: multi-day, many stacked prs, fleets of workers. |
- | [autopilot-full](./skills/igoroh-mode/playbooks/autopilot-full.md) | run independent prs to merged with one owner per pr. a swarm verifies each code-ready head, and every later change to the patch gets a fresh check. |
- | [autopilot-stack](./skills/igoroh-mode/playbooks/autopilot-stack.md) | autopilot-full without the merge. build and verify prs for the operator to review and land, stacking a pr only on a pr it builds on. |
- | [session pickup](./skills/igoroh-mode/playbooks/session-pickup.md) | resume or take over a prior agent's in-flight work. |
+@@ -88,7 +81,7 @@ morning.
  | [pause safely](./skills/igoroh-mode/playbooks/pause-safely.md) | suspend in-flight work cleanly so it can be resumed later. |
  | [multi-phase plan](./skills/igoroh-mode/playbooks/multi-phase-plan.md) | work that spans phases or stacked PRs. |
  | [worktree cleanup](./skills/igoroh-mode/playbooks/worktree-cleanup.md) | reclaim disk by pruning merged or abandoned worktrees and stale ios simulators, safety-gated. |
@@ -80,7 +72,7 @@ index 7eadf29..47948be 100644
  
  </details>
  
-@@ -103,9 +96,9 @@ when invoked it:
+@@ -102,9 +95,9 @@ when invoked it:
  
  the full rules and playbooks live in [`skills/igoroh-mode/SKILL.md`](./skills/igoroh-mode/SKILL.md).
  
@@ -145,7 +137,7 @@ index 7eadf29..47948be 100644
  
 @@ -280,12 +268,6 @@ models are configurable too. type [`/setup-istack`](./skills/setup-istack/SKILL.
  
- when a default changes, a rule written before the change still pins the old default. delete those role lines, or delete the file, then run `/setup-istack` again. a rerun keeps any role whose model differs from the default.
+ when a default changes, a rule written before the change still pins the old default until you run `/setup-istack` again. that run replaces the old defaults it recognizes and keeps any other role whose model differs from the default. to drop a pin it does not recognize, delete that role's line or the file first.
  
 -## automations
 -

@@ -1,13 +1,13 @@
 diff --git a/claude-code/docs/guide/02-igoroh-mode.md b/claude-code/docs/guide/02-igoroh-mode.md
-index 7287fed..73d5b63 100644
+index b064fb7..74d821a 100644
 --- a/claude-code/docs/guide/02-igoroh-mode.md
 +++ b/claude-code/docs/guide/02-igoroh-mode.md
 @@ -1,6 +1,6 @@
 -# Route work through `/igoroh-mode`
 +# Route work through `/istack:igoroh-mode`
  
--`/igoroh-mode` is the front door. You give it a goal, it matches one of twenty-three playbooks, copies that playbook's steps into the todo list, and calls the other skills as the steps need them. In this page you learn what a good prompt looks like, and how little of one you actually need.
-+`/istack:igoroh-mode` is the front door. You give it a goal, it matches one of twenty-three playbooks, copies that playbook's steps into the todo list, and calls the other skills as the steps need them. In this page you learn what a good prompt looks like, and how little of one you actually need.
+-`/igoroh-mode` is the front door. You give it a goal, it matches one of twenty-two playbooks, copies that playbook's steps into the todo list, and calls the other skills as the steps need them. In this page you learn what a good prompt looks like, and how little of one you actually need.
++`/istack:igoroh-mode` is the front door. You give it a goal, it matches one of twenty-two playbooks, copies that playbook's steps into the todo list, and calls the other skills as the steps need them. In this page you learn what a good prompt looks like, and how little of one you actually need.
  
  ![A dispatcher pulls a switch lever to route robots on rail handcars toward lit gates, under a /igoroh-mode departure board listing BUG FIX, FEATURE, and INVESTIGATION.](./images/router.jpg)
  
@@ -19,7 +19,7 @@ index 7287fed..73d5b63 100644
 +/istack:igoroh-mode users get two notifications after a retry. repro first, then fix and verify.
  ```
  
- That's a Bug fix prompt. "repro first" is a real constraint, not politeness, and the playbook honors it. Watch the todo list fill with the Bug fix steps. A skipped step stays visible with `skip: <reason>`.
+ That's a Bug fix prompt. "repro first" is a real constraint, not politeness, and the playbook honors it. Watch the todo list fill with the Bug fix steps.
 @@ -50,7 +50,7 @@ A useful prompt carries up to five things, and each one fits in a sentence:
  Here's one prompt with all five:
  
@@ -29,7 +29,7 @@ index 7287fed..73d5b63 100644
  ```
  
  Two things are worth leaving out:
-@@ -61,25 +61,25 @@ Two things are worth leaving out:
+@@ -61,33 +61,33 @@ Two things are worth leaving out:
  For a noisy report, such as a long thread or a vague bug, make the restatement the first step:
  
  ```text
@@ -48,8 +48,19 @@ index 7287fed..73d5b63 100644
 +/istack:sharpen write a migration guide for the v2 config format.
  ```
  
--The agent says what a top professional would do that you didn't ask for, the rawest material they would start from, the methods and tools they would use, and what other than you or the agent would show the result is right. Then it rewrites your prompt to ask for exactly that, deeper but not bigger, and leaves your choices open. It doesn't do the task. Read the rewrite, then send it, for example with `/igoroh-mode`.
-+The agent says what a top professional would do that you didn't ask for, the rawest material they would start from, the methods and tools they would use, and what other than you or the agent would show the result is right. Then it rewrites your prompt to ask for exactly that, deeper but not bigger, and leaves your choices open. It doesn't do the task. Read the rewrite, then send it, for example with `/istack:igoroh-mode`.
+-The agent says what a top professional would do that you didn't ask for, the rawest material they would start from, the methods and tools they would use, and what other than you or the agent would show the result is right. Then it rewrites your prompt to ask for exactly that, deeper but not bigger. The rewrite asks the agent to prototype any choice an experiment can settle and to recommend an option from what it observed, and it leaves product and preference choices to you. It doesn't do the task. Read the rewrite, then send it, for example with `/igoroh-mode`.
++The agent says what a top professional would do that you didn't ask for, the rawest material they would start from, the methods and tools they would use, and what other than you or the agent would show the result is right. Then it rewrites your prompt to ask for exactly that, deeper but not bigger. The rewrite asks the agent to prototype any choice an experiment can settle and to recommend an option from what it observed, and it leaves product and preference choices to you. It doesn't do the task. Read the rewrite, then send it, for example with `/istack:igoroh-mode`.
+ 
+-When you can't name what you're after, run [`/reframe`](../../skills/reframe/SKILL.md) on your own description and files first:
++When you can't name what you're after, run [`/istack:reframe`](../../skills/reframe/SKILL.md) on your own description and files first:
+ 
+ ```text
+-/reframe the settings page saves some fields right away and others only on submit, and people lose edits.
++/istack:reframe the settings page saves some fields right away and others only on submit, and people lose edits.
+ ```
+ 
+-The agent gives 8 to 12 expert terms, ranked by how much each would change what you build. Each comes with the part of your description it names, a real project that uses it, with the link checked, and what it lets you ask an agent for. It also borrows terms from 2 or 3 neighboring fields that solved the same problem under other names, and says where each analogy breaks. Then it rewrites your description with the new words. Send the rewrite, or run `/sharpen` on it.
++The agent gives 8 to 12 expert terms, ranked by how much each would change what you build. Each comes with the part of your description it names, a real project that uses it, with the link checked, and what it lets you ask an agent for. It also borrows terms from 2 or 3 neighboring fields that solved the same problem under other names, and says where each analogy breaks. Then it rewrites your description with the new words. Send the rewrite, or run `/istack:sharpen` on it.
  
  ## Follow up short
  
@@ -61,7 +72,7 @@ index 7287fed..73d5b63 100644
  ```
  
  ```text
-@@ -90,34 +90,38 @@ continue
+@@ -98,34 +98,38 @@ continue
  keep going until done
  ```
  
@@ -110,7 +121,7 @@ index 7287fed..73d5b63 100644
  ```
  
  The [Worktree cleanup playbook](../../skills/igoroh-mode/playbooks/worktree-cleanup.md) classifies every worktree by merge state, uncommitted work, and which chats still touch it. It deletes only what that evidence clears and pauses for your call on anything holding uncommitted work.
-@@ -127,12 +131,12 @@ The [Worktree cleanup playbook](../../skills/igoroh-mode/playbooks/worktree-clea
+@@ -135,12 +139,12 @@ The [Worktree cleanup playbook](../../skills/igoroh-mode/playbooks/worktree-clea
  When you step away, say what done means and go:
  
  ```text
@@ -121,7 +132,7 @@ index 7287fed..73d5b63 100644
 -Work you'll review later routes through [`/figure-it-out`](../../skills/figure-it-out/SKILL.md), which designs the run's phases and keeps a [`/show-me-your-work`](../../skills/show-me-your-work/SKILL.md) decision log. [Run work while you sleep](./07-overnight.md) covers the full overnight contract.
 +Work you'll review later routes through [`/istack:figure-it-out`](../../skills/figure-it-out/SKILL.md), which designs the run's phases and keeps a [`/istack:show-me-your-work`](../../skills/show-me-your-work/SKILL.md) decision log. [Run work while you sleep](./07-overnight.md) covers the full overnight contract.
  
--**Pitfall:** don't enumerate skills in your prompt ("use /how, then /architect, then /arena..."). The playbook already sequences them, and a hand-written sequence usually reorders or drops steps the playbook would have kept. Name a skill only when you want to override a specific choice.
+-**Pitfall:** don't enumerate skills in your prompt ("use /architect, then /arena, then /interrogate..."). The playbook already sequences them, and a hand-written sequence usually reorders or drops steps the playbook would have kept. Name a skill only when you want to override a specific choice.
 +**Pitfall:** don't enumerate skills in your prompt ("use /istack:how, then /istack:architect, then /istack:arena..."). The playbook already sequences them, and a hand-written sequence usually reorders or drops steps the playbook would have kept. Name a skill only when you want to override a specific choice.
  
  Read [`igoroh-mode`](../../skills/igoroh-mode/SKILL.md) itself for the full routing rules.

@@ -1,5 +1,5 @@
 diff --git a/claude-code/docs/guide/README.md b/claude-code/docs/guide/README.md
-index 86204f3..27206aa 100644
+index 86204f3..48e9232 100644
 --- a/claude-code/docs/guide/README.md
 +++ b/claude-code/docs/guide/README.md
 @@ -1,26 +1,28 @@
@@ -23,7 +23,7 @@ index 86204f3..27206aa 100644
 +4. [Design the change](./04-design.md). `/istack:architect`, `/istack:arena`, `/istack:swarm`, `/istack:interrogate`, prototypes, and plans before code locks in a shape.
 +5. [Build and clean the change](./05-build-and-clean.md). The build playbooks, `/istack:tdd`, `/istack:unslop`, and `/istack:no-comments`.
 +6. [Verify and ship](./06-verify-and-ship.md). Prove behavior on the real app, formally verify what tests rarely reach, vet numbers with `/istack:benchmark-checklist`, then open a focused PR and drive it to merged.
-+7. [Run work while you sleep](./07-overnight.md). Trust before loops, an overnight contract, a decision log you can audit, and the Orchestrate playbook for a program that spans days and many PRs.
++7. [Run work while you sleep](./07-overnight.md). Trust before loops, an overnight contract, a decision log you can audit, and `/istack:figure-it-out` for a program that spans days and many PRs.
  8. [Steer with principle names](./08-principles.md). The 24 names that redirect an agent mid-task.
 -9. [Make it yours](./09-make-it-yours.md). Your own mode, `/correct` for repeated mistakes, and how to test a skill change.
 +9. [Make it yours](./09-make-it-yours.md). Your own mode, `/istack:correct` for repeated mistakes, and how to test a skill change.

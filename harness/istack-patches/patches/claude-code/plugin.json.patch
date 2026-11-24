@@ -1,13 +1,13 @@
 diff --git a/claude-code/plugin.json b/claude-code/plugin.json
-index 5056488..ae574a8 100644
+index 3f12ccc..3792cc7 100644
 --- a/claude-code/plugin.json
 +++ b/claude-code/plugin.json
 @@ -1,7 +1,7 @@
  {
    "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
    "name": "istack",
--  "version": "0.15.36",
-+  "version": "0.17.2",
+-  "version": "0.15.48",
++  "version": "0.18.0",
    "description": "if you want to go fast, go deep first. istack helps you write less, but higher quality code. rigorous agent workflows you can parallelize with confidence.",
    "author": {
      "name": "Lauren Tan"

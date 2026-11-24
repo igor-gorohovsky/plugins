@@ -1,13 +1,14 @@
 diff --git a/claude-code/agents/igoroh-agent.md b/claude-code/agents/igoroh-agent.md
 deleted file mode 100644
-index 913d569..0000000
+index 15329d5..0000000
 --- a/claude-code/agents/igoroh-agent.md
 +++ /dev/null
-@@ -1,9 +0,0 @@
+@@ -1,10 +0,0 @@
 ----
 -name: igoroh-agent
 -description: Delegate subagent for code-writing and helper tasks spawned during a `/igoroh-mode` run. Use for delegates, not as the runner for `/igoroh-mode` itself. Spawn a fresh `igoroh-agent` for each new task, and resume one only in the strict cases that igoroh-mode's Subagents section names. Reads the `igoroh-mode` skill's `SKILL.md` in full before any work, including its inline Principles index. Substituting `generalPurpose` skips that read and drifts.
 -is_background: true
+-model: claude-opus-5-5-xhigh-fast
 ----
 -
 -# Igoroh subagent

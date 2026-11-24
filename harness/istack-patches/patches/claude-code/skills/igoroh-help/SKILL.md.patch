@@ -1,5 +1,5 @@
 diff --git a/claude-code/skills/igoroh-help/SKILL.md b/claude-code/skills/igoroh-help/SKILL.md
-index 603f1b2..ec73908 100644
+index d0f8633..a3d30da 100644
 --- a/claude-code/skills/igoroh-help/SKILL.md
 +++ b/claude-code/skills/igoroh-help/SKILL.md
 @@ -6,27 +6,28 @@ disable-model-invocation: true
@@ -54,25 +54,26 @@ index 603f1b2..ec73908 100644
  
 -istack is built for Cursor, and it also installs in Claude Code with `/plugin marketplace add cursor/plugins`, then `/plugin install istack@cursor-plugins`. There, each command takes a `istack:` prefix, such as `/istack:igoroh-mode`. The [Claude Code adapter](../../docs/harness/claude-code.md) maps the Cursor names, and a step that needs a Cursor-only feature, such as Bugbot or Automations, is skipped with a one-line note.
 -
--Other tools can read the skills, because they use the Agent Skills format. But most workflow skills, including `/igoroh-mode`, `/how`, `/why`, and `/teach`, spawn Cursor subagents with per-role models, and Custom Modes and `/loop` are Cursor features, so those parts may not work there.
+-Other tools can read the skills, because they use the Agent Skills format. But most workflow skills, including `/igoroh-mode`, `/how`, and `/teach`, spawn Cursor subagents, some with per-role models, and Custom Modes and `/loop` are Cursor features, so those parts may not work there.
 +istack runs in Claude Code inside Rex or Herdr. Each command takes the `istack:` prefix, such as `/istack:igoroh-mode`. Workers run as terminals of that multiplexer on Claude Code, pi, or Codex, so the user can watch and steer them from the sidebar. Fixed-shape fan-outs run through the `istack:panel` workflow, which `/workflows` shows live. The [workers doc](../../docs/workers.md) has the details.
  
  ## Start a task with `/igoroh-mode`
  
- `/igoroh-mode` matches the task to a playbook, copies the playbook's steps into the todo list, and runs the other skills as the steps need them. A step it skips stays in the list as `skip: <reason>`. A good prompt states the goal and how to tell it's done. It doesn't list skills, because a hand-written sequence tends to drop or reorder steps the playbook would keep. Read [`references/prompting.md`](references/prompting.md) before you help word one. [Guide page 2](../../docs/guide/02-igoroh-mode.md) has examples.
- 
+-`/igoroh-mode` matches the task to a playbook, copies the playbook's steps into the todo list, and runs the other skills as the steps need them. A good prompt states the goal and how to tell it's done. It doesn't list skills, because a hand-written sequence tends to drop or reorder steps the playbook would keep. Read [`references/prompting.md`](references/prompting.md) before you help word one. [Guide page 2](../../docs/guide/02-igoroh-mode.md) has examples.
+-
 -Whether `/igoroh-mode` stays on depends on how the user starts it:
 -
 -- Enter on `/igoroh-mode` attaches the skill to one message. It fades as the chat moves on.
 -- Option+Enter on Mac or Alt+Enter on Windows, or Use as Mode from the skill entry, makes it a Custom Mode. It stays in context every turn until the user exits the mode, and it stays out of casual turns.
 -- Cursor's docs list Custom Modes in the Agents Window and the CLI. Elsewhere, start each new task with `/igoroh-mode`.
--
++`/igoroh-mode` matches the task to a playbook, copies the playbook's steps into the todo list, and runs the other skills as the steps need them. A step it skips stays in the list as `skip: <reason>`. A good prompt states the goal and how to tell it's done. It doesn't list skills, because a hand-written sequence tends to drop or reorder steps the playbook would keep. Read [`references/prompting.md`](references/prompting.md) before you help word one. [Guide page 2](../../docs/guide/02-igoroh-mode.md) has examples.
+ 
 -Link [Cursor's skills docs](https://cursor.com/docs/skills) when this comes up. Mid-chat, "new task" makes the mode match a fresh playbook. `/igoroh-mode` already uses `igoroh-agent` for the subagents its playbook steps spawn. To get the same style from a subagent of your own, spawn it with `subagent_type: "igoroh-agent"`.
 +`/istack:igoroh-mode` loads the skill into the chat once. It stays in context, but its pull fades over a long chat, so start each new task with it. Mid-chat, "new task" makes the mode match a fresh playbook. The workers it starts read igoroh-mode themselves, because their briefs point to it.
  
  ## Pick a skill
  
-@@ -79,7 +72,7 @@ The default answer is `/igoroh-mode`, which runs most of the others when its ste
+@@ -80,7 +73,7 @@ The default answer is `/igoroh-mode`, which runs most of the others when its ste
  | Know what a small diff could break outside itself | [`/blast-radius`](../blast-radius/SKILL.md) |
  | Settle types and module shape before code that crosses a function boundary | [`/architect`](../architect/SKILL.md) |
  | Get several attempts at one brief, merged into the best one | [`/arena`](../arena/SKILL.md) |
@@ -81,7 +82,7 @@ index 603f1b2..ec73908 100644
  | Have different models review a diff and try to break it | [`/interrogate`](../interrogate/SKILL.md) |
  | Fix a bug test-first when a cheap local test exists | [`/tdd`](../tdd/SKILL.md) |
  | Apply TypeScript rules to `.ts` or `.tsx` work | [`/typescript-best-practices`](../typescript-best-practices/SKILL.md) |
-@@ -99,7 +92,6 @@ The default answer is `/igoroh-mode`, which runs most of the others when its ste
+@@ -100,7 +93,6 @@ The default answer is `/igoroh-mode`, which runs most of the others when its ste
  | Turn their own working habits into a personal mode skill | [`/automate-me`](../automate-me/SKILL.md) |
  | Turn what a finished task taught into skill edits | [`/reflect`](../reflect/SKILL.md) |
  | Stop agents from repeating the same mistakes in this repo | [`/correct`](../correct/SKILL.md) |
@@ -97,14 +98,14 @@ index 603f1b2..ec73908 100644
 -- `/loop` and `/create-skill` are Cursor built-ins.
 +- `/simplify` and `/code-review` (the review gate before each commit) and `/loop` are Claude Code built-ins.
 +- `writing-for-agents` and `anthropic-skills:skill-creator` author skills.
- - istack has no `/orchestrate` skill. Orchestrate is a `/igoroh-mode` playbook. If the slash menu shows `/orchestrate`, another plugin provides it.
+ - istack has no `/orchestrate` skill. If the slash menu shows `/orchestrate`, another plugin provides it.
  
  ## Playbooks and principles
 @@ -130,9 +122,9 @@ Playbooks are step lists inside `/igoroh-mode`, not skills, so they have no slas
  - "full autopilot on this queue" runs Autopilot-full. "autopilot, don't merge" runs Autopilot-stack.
  - "run the eval playbook" runs Eval.
  
--Without `/igoroh-mode`, a phrase such as "babysit this pr" can start Cursor's own skill for the same job instead. The Playbooks section of [`igoroh-mode`](../igoroh-mode/SKILL.md) lists every playbook and when it applies. [Guide page 6](../../docs/guide/06-verify-and-ship.md) covers opening, babysitting, and landing a PR.
+-Without `/igoroh-mode`, a phrase such as "babysit this pr" can start Cursor's own skill for the same job instead. The Playbooks section of [`igoroh-mode`](../igoroh-mode/SKILL.md) lists every playbook. [Guide page 6](../../docs/guide/06-verify-and-ship.md) covers opening, babysitting, and landing a PR.
 +The Playbooks section of [`igoroh-mode`](../igoroh-mode/SKILL.md) lists every playbook and when it applies. [Guide page 6](../../docs/guide/06-verify-and-ship.md) covers opening, babysitting, and landing a PR.
  
 -istack has no planning skill. Cursor's Plan Mode works alongside it. For work that spans phases or stacked PRs, asking `/igoroh-mode` for a plan runs the [Multi-phase plan playbook](../igoroh-mode/playbooks/multi-phase-plan.md), which writes the plan and doesn't implement it. For a design question, the Prototype playbook or `/architect` settles it in code first.

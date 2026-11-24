@@ -1,5 +1,5 @@
 diff --git a/claude-code/docs/guide/06-verify-and-ship.md b/claude-code/docs/guide/06-verify-and-ship.md
-index 8608c7b..f540a25 100644
+index c7b66fd..1f73d0a 100644
 --- a/claude-code/docs/guide/06-verify-and-ship.md
 +++ b/claude-code/docs/guide/06-verify-and-ship.md
 @@ -11,7 +11,7 @@ Verification is the slowest step in most agent work, because it's the step that
@@ -53,7 +53,7 @@ index 8608c7b..f540a25 100644
  
  ```text
  /maintain-verification-skill
-@@ -128,7 +128,7 @@ A counterexample in model terms convinces you. The PM or designer who owns the b
+@@ -128,23 +128,23 @@ A counterexample in model terms convinces you. The PM or designer who owns the b
  ## Open the PR
  
  ```text
@@ -61,8 +61,11 @@ index 8608c7b..f540a25 100644
 +/istack:igoroh-mode open the pr. small ordered commits, evidence in the description.
  ```
  
- The [Opening a PR playbook](../../skills/igoroh-mode/playbooks/opening-a-pr.md) works from a worktree, rebases the work into small ordered commits, cleans the diff, unslops the prose, and returns the PR link. Five narrow PRs beat one fat one, and stacked follow-ups beat a growing branch.
-@@ -138,13 +138,13 @@ The [Opening a PR playbook](../../skills/igoroh-mode/playbooks/opening-a-pr.md)
+-The [Opening a PR playbook](../../skills/igoroh-mode/playbooks/opening-a-pr.md) works from a worktree, rebases the work into small landable commits, cleans the diff, writes a one-minute briefing as the body, and opens the PR ready. Stacked follow-ups beat a growing branch.
++The [Opening a PR playbook](../../skills/igoroh-mode/playbooks/opening-a-pr.md) works from a worktree, rebases the work into small ordered commits, runs the review gate on the diff, writes the body with the `pr` skill, and opens the PR as a draft. Stacked follow-ups beat a growing branch.
+ 
+ ## Drive the PR to merge-ready with Babysit
+ 
  An open PR starts collecting blockers immediately. Checks fail, reviewers comment, trunk moves. Hand that churn to the [Babysit playbook](../../skills/igoroh-mode/playbooks/babysit.md):
  
  ```text
@@ -70,7 +73,7 @@ index 8608c7b..f540a25 100644
 +/istack:igoroh-mode babysit this pr. get it green.
  ```
  
- Babysit watches the PR, with a bundled watcher on GitHub or the Origin CLI when it's available, and takes blockers in order: conflicts, then review threads, then CI. Every known fix batches into one push, so the checks restart once instead of after every fix. The comment triage is skeptical, because humans and bots file real catches and noise in the same list. A real finding gets a fix, and noise gets dismissed with the disproof posted on the thread. When all you want is status, ask smaller and Babysit answers without starting the loop:
+ Babysit watches the PR, with a bundled watcher on GitHub or the Origin CLI when it's available, and takes blockers in order: conflicts, then review threads, then CI. It never rebases or force-pushes. A conflict or a stale base comes back to you with the branch that needs the rebase. The comment triage is skeptical, because humans and bots file real catches and noise in the same list. A real finding gets a fix, and noise gets dismissed with the disproof posted on the thread. When all you want is status, ask smaller and Babysit answers without starting the loop:
  
  ```text
 -/igoroh-mode check on pr 123. anything outstanding?

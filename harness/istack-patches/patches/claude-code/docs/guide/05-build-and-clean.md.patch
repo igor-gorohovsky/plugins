@@ -1,5 +1,5 @@
 diff --git a/claude-code/docs/guide/05-build-and-clean.md b/claude-code/docs/guide/05-build-and-clean.md
-index 99d9d71..0192f8a 100644
+index f6996d5..0192f8a 100644
 --- a/claude-code/docs/guide/05-build-and-clean.md
 +++ b/claude-code/docs/guide/05-build-and-clean.md
 @@ -7,77 +7,77 @@ The build playbooks share one discipline. Say what you observed, and let the pla
@@ -65,7 +65,7 @@ index 99d9d71..0192f8a 100644
  
  ## Clean before you commit
  
--The [Opening a PR playbook](../../skills/igoroh-mode/playbooks/opening-a-pr.md) runs `/deslop` on the diff before each commit and applies [`/unslop`](../../skills/unslop/SKILL.md) to the PR description and commit bodies. `/deslop` ships in the `cursor-team-kit` plugin, not in istack. If you don't have it, ask for the same outcome in plain words: remove narrating comments, unsupported guards, dead compatibility paths, and unrelated edits.
+-The [Opening a PR playbook](../../skills/igoroh-mode/playbooks/opening-a-pr.md) runs `/deslop` on the diff before each commit, and igoroh-mode applies [`/unslop`](../../skills/unslop/SKILL.md) to the PR description and commit bodies. `/deslop` ships in the `cursor-team-kit` plugin, not in istack. If you don't have it, ask for the same outcome in plain words: remove narrating comments, unsupported guards, dead compatibility paths, and unrelated edits.
 +The [Opening a PR playbook](../../skills/igoroh-mode/playbooks/opening-a-pr.md) runs the review gate on the diff before each commit, `/simplify` and then `/code-review xhigh --fix`, and applies [`/istack:unslop`](../../skills/unslop/SKILL.md) to the PR description and commit bodies. `/simplify` is a Claude Code built-in and its job is the pre-commit cleanup. When it misses something, ask for the outcome in plain words: remove narrating comments, unsupported guards, dead compatibility paths, and unrelated edits.
  
 -For prose, `/unslop` takes a target and any extra rules you have:
