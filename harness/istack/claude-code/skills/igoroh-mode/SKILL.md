@@ -111,7 +111,7 @@ The tracker is Notion. A repo can have a local ticket file with the database, st
 
 ## Subagents
 
-Every subagent is a worker, started per [the workers doc](../../docs/workers.md). The chat that receives `/igoroh-mode` runs the playbook and starts every worker. A worker never runs the playbook itself.
+Every subagent is a worker, started per [the workers doc](../../docs/workers.md). Every worker runs the playbook too: `istack-worker` opens its first prompt with `/istack:igoroh-mode`.
 
 **Roles.** A code delegate runs on its playbook's role: `feature, refactoring`, `bug-fix`, `perf-issue`, or `hillclimb`. The hardest changes (cross-cutting design, gnarly concurrency, subtle algorithms) run on `hardest tasks`, whether the work needs judgment on vague intent or is a precisely specified sequence to execute to the letter. Prose and judgment run on `judgment and prose`. Verification runs on `swarm workers`. The routed skills (`how`, `why`, `arena`, `swarm`, `architect`, `interrogate`, `reflect`) name their own roles.
 

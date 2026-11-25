@@ -15,7 +15,7 @@ Pick the effort for the job with `--effort`. Raise it one step for the hardest o
 ## One worker
 
 1. Write the brief to a file. It is the worker's whole context. It opens with the user's goal in your words, then the scope, the done condition, how to verify, and what the report contains.
-   - A code delegate's brief starts with: `Read <absolute path of igoroh-mode's SKILL.md> in full before any work.`
+   - The worker runs igoroh-mode: `istack-worker` opens its first prompt with `/istack:igoroh-mode` (for pi and Codex, with the skill file's path), so the brief need not name it.
    - A worker that edits code gets its own git worktree as `--cwd`.
 2. Start it:
    `istack-worker start --role <role> [--seat N] --name <name> [--session <label>] --cwd <dir> --brief <file> --report <file>`

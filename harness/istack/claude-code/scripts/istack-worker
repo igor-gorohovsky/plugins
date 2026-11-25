@@ -24,6 +24,7 @@ RULE_PATH = Path(os.environ.get("ISTACK_MODELS_RULE", "~/.claude/rules/istack-mo
 HC = os.environ.get("ISTACK_HC", "hc")
 REX = os.environ.get("ISTACK_REX", "rex")
 REX_WAIT_SCRIPT = Path(__file__).resolve().with_name("rex_wait_worker.lua")
+IGOROH_MODE_SKILL = Path(__file__).resolve().parent.parent / "skills" / "igoroh-mode" / "SKILL.md"
 REX_STATE = Path(os.environ.get("ISTACK_REX_STATE", "~/.cache/istack/rex")).expanduser()
 SCREEN_TAIL_LINES = 40
 EFFORTS = ("low", "medium", "high", "xhigh", "max")
@@ -125,8 +126,10 @@ def convert_to_terminal_name(text):
     return name
 
 
-def compose_first_message(brief, report):
-    return (f"You are an istack worker. Read your brief at {brief} and do that work, inside its scope. "
+def compose_first_message(harness, brief, report):
+    # Claude Code runs a slash command only at the start of a prompt; other harnesses read the skill file.
+    playbook = "/istack:igoroh-mode " if harness == "claude" else f"Read {IGOROH_MODE_SKILL} in full and follow it. "
+    return (f"{playbook}You are an istack worker. Read your brief at {brief} and do that work, inside its scope. "
             f"When the work is done, write your complete final report to {report} in one write, then end your turn. "
             f"Start other agents only when the brief assigns it.")
 
@@ -392,7 +395,7 @@ def start_worker(mux, role, seat, name, cwd, brief, report, effort, brief_text=N
     if not brief_path.exists():
         raise WorkerError(f"brief {brief_path} does not exist")
     entry = choose_claude_entry(entries[seat]) if claude else entries[seat]
-    command = build_command(entry, effort) + [compose_first_message(brief_path, report_path)]
+    command = build_command(entry, effort) + [compose_first_message(entry["harness"], brief_path, report_path)]
     terminal_name = convert_to_terminal_name(name)
     started = mux.start_terminal(terminal_name, str(cwd_path), command, session)
     return {"name": terminal_name, **started, "spec": entry["spec"], "family": entry["family"], "report": str(report_path)}
