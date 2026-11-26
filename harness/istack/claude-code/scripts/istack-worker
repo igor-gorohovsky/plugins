@@ -130,8 +130,7 @@ def compose_first_message(harness, brief, report):
     # Claude Code runs a slash command only at the start of a prompt; other harnesses read the skill file.
     playbook = "/istack:igoroh-mode " if harness == "claude" else f"Read {IGOROH_MODE_SKILL} in full and follow it. "
     return (f"{playbook}You are an istack worker. Read your brief at {brief} and do that work, inside its scope. "
-            f"When the work is done, write your complete final report to {report} in one write, then end your turn. "
-            f"Start other agents only when the brief assigns it.")
+            f"When the work is done, write your complete final report to {report} in one write, then end your turn.")
 
 
 def run_command(program, arguments):
