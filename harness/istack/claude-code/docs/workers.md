@@ -4,7 +4,7 @@ istack runs every subagent as a **worker**: an interactive agent (Claude Code, p
 
 ## Running code on esh-orchestrator
 
-On esh-orchestrator, workers never run Docker, test stacks, evals or builds locally. From the worktree, `verify-remote --proof <script>` runs `/verify` and `verify-remote check` runs the CI checks, each on a throwaway exe.dev VM tagged `verify`. The VM is shared and small, and a local stack has run it out of memory and killed other workers. Put this rule in the brief of every worker that edits code.
+On esh-orchestrator, workers never run Docker, test stacks, evals or builds locally. They run them on their own exe.dev VM, per the global rule "Heavy work runs on an exe.dev VM" in `~/.claude/CLAUDE.md`, sized by the project's `CLAUDE.local.md`. The VM is shared and small, and a local stack has run it out of memory and killed other workers. Put this rule in the brief of every worker that edits code.
 
 ## Roles
 
