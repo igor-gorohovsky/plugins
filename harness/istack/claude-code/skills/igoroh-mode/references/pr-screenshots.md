@@ -4,7 +4,7 @@ GitHub has no API to attach images. Upload each screenshot to the Cloudflare R2 
 
 The key is `<branch>/<8 random hex chars>.png`. It must have the random part: the bucket is public with no listing, so a key nobody can guess is the only protection.
 
-## With the Cloudflare MCP (`cloudflare` server)
+## With the Cloudflare MCP (`cloudflare` server, Claude Code)
 
 Upload from a REPL script, so the image bytes never pass through your context. Read the file to base64 in the script and send it with the `execute` tool, which runs code against the Cloudflare API:
 
@@ -19,6 +19,16 @@ await tools.mcp__cloudflare__execute({code: `async () => {
 ```
 
 Never paste base64 into a tool call by hand. Use `video/mp4` as the content type for a recording.
+
+## With curl (an exe.dev VM with the `r2-screenshots` integration)
+
+Works from any process, pi and Codex included, with no credential on the VM: the integration adds the token.
+
+```sh
+key="<branch>/$(openssl rand -hex 4).png"
+curl -sf -X PUT -H 'Content-Type: image/png' --data-binary @<path> \
+  "https://r2-screenshots.int.exe.xyz/client/v4/accounts/78246d281fab6812694376558beb43fa/r2/buckets/github-screenshots/objects/$key"
+```
 
 ## With wrangler (no MCP, logged in to Cloudflare)
 
