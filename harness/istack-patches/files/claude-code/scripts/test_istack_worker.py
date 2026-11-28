@@ -21,6 +21,7 @@ def load_worker_module():
 
 
 worker = load_worker_module()
+worker.CCW = ""
 
 MUX_VARIABLES = ("HC_TERMINAL_ID", "REX_BLOCK", "ISTACK_MUX")
 
@@ -120,7 +121,7 @@ class FakeMuxTestCase(unittest.TestCase):
         """Run istack-worker with only the multiplexer variables given in `environment`."""
         base = {key: value for key, value in os.environ.items() if key not in MUX_VARIABLES}
         base.update({"ISTACK_MODELS_RULE": str(self.rule), "FAKE_LOG": str(self.log), "FAKE_WAITS": json.dumps(list(waits)),
-                     "FAKE_REPORT": str(self.report), "ISTACK_STARTUP_POLL_SECONDS": "0", **environment})
+                     "FAKE_REPORT": str(self.report), "ISTACK_STARTUP_POLL_SECONDS": "0", "ISTACK_CCW": "", **environment})
         completed = subprocess.run([sys.executable, str(SCRIPT), *arguments], capture_output=True, text=True, env=base)
         return completed.returncode, json.loads(completed.stdout or completed.stderr)
 
@@ -196,6 +197,41 @@ class WorkerLifecycleTest(FakeMuxTestCase):
         run_call = self.read_calls()[0]
         self.assertEqual(run_call[run_call.index("--") + 1:run_call.index("--") + 6], ["claude", "--model", "opus", "--effort", "high"])
         self.assertEqual(result["family"], "claude")
+
+    def test_a_claude_seat_starts_under_ccw_when_it_is_installed(self):
+        ccw = self.install_fake_ccw()
+        code, result = self.run_script(self.build_start_arguments() + ["--claude"], [], ISTACK_HC=str(self.tool),
+                                       HC_TERMINAL_ID="t1", ISTACK_CCW=str(ccw))
+        self.assertEqual(code, 0, result)
+        run_call = self.read_calls()[0]
+        self.assertEqual(run_call[run_call.index("--") + 1:run_call.index("--") + 4], [str(ccw), "--", "claude"])
+
+    def test_a_pi_seat_starts_without_ccw(self):
+        ccw = self.install_fake_ccw()
+        code, result = self.run_script(self.build_start_arguments(), [], ISTACK_HC=str(self.tool), HC_TERMINAL_ID="t1",
+                                       ISTACK_CCW=str(ccw))
+        self.assertEqual(code, 0, result)
+        run_call = self.read_calls()[0]
+        self.assertEqual(run_call[run_call.index("--") + 1], "pi")
+
+    def test_a_claude_seat_starts_without_ccw_when_it_is_missing(self):
+        code, result = self.run_script(self.build_start_arguments() + ["--claude"], [], ISTACK_HC=str(self.tool),
+                                       HC_TERMINAL_ID="t1", ISTACK_CCW=str(Path(self.directory.name) / "no-ccw"))
+        self.assertEqual(code, 0, result)
+        run_call = self.read_calls()[0]
+        self.assertEqual(run_call[run_call.index("--") + 1], "claude")
+
+    def install_fake_ccw(self):
+        ccw = Path(self.directory.name) / "ccw"
+        ccw.write_text("#!/bin/sh\n")
+        ccw.chmod(0o755)
+        return ccw
+
+    def test_a_wait_that_runs_out_still_says_whether_the_report_exists(self):
+        self.report.parent.mkdir()
+        self.report.write_text("report")
+        code, result = self.run_worker(["wait", "--name", "swarm-1", "--report", str(self.report), "--max-seconds", "0"], [])
+        self.assertEqual((code, result["status"], result["report_exists"]), (0, "working", True))
 
     def test_start_refuses_outside_rex_and_herdr(self):
         code, result = self.run_script(self.build_start_arguments(), ISTACK_HC=str(self.tool))

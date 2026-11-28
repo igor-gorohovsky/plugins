@@ -6,6 +6,8 @@
 --
 -- Returns {"status": "done" | "blocked" | "error" | "idle" | "exited" | "working", ...}; "working" means the timeout
 -- passed. "idle" is an agent that has sat at its prompt for a while: the user interrupted it, or it never started.
+-- It is also an agent that ccw holds suspended with no record of its last turn, as after `ccw restore` brought it
+-- back from a Rex server restart: no turn runs until a line wakes it.
 -- "exited" is also a tab that fell back to a bare shell (a Rex server restart restores every tab as a shell).
 -- The state is read from the terminal's current program-status record (OSC 7501) and its exit code, so a turn
 -- that ended before the wait started is not missed. `after` is the updated_at of the record that was current
@@ -16,6 +18,8 @@ local TERM = "com.superlogical.terminal"
 local FINAL_STATES = { done = true, blocked = true, error = true }
 local IDLE_SECONDS = 20
 local SHELLS = { bash = true, zsh = true, sh = true, fish = true, dash = true }
+-- ccw reports an agent it suspended as a child record with this id, in state idle; it clears the record on wake.
+local CCW_RECORD = "ccw"
 local POLL_SECONDS = 2
 local block = assert(rex.block_id, "run with -b <block id>")
 local after = rex.args.after and tostring(rex.args.after) or nil
@@ -43,11 +47,21 @@ local function read_state()
   local bare = child and foreground and child.pid == foreground.pid and SHELLS[child.name]
     and tostring(child.argv0):sub(1, 1) == "-"
   if bare then return { status = "exited" } end
+  local suspended, turn_on_record = nil, false
   for _, record in ipairs(call_block("program_status").records or {}) do
-    local ended = FINAL_STATES[record.state] or check_idle_for_long(record)
-    if (record.id or "") == "" and ended and record.updated_at ~= after then
-      return { status = record.state, kind = record.kind, msg = record.msg, at = record.updated_at }
+    local id = record.id or ""
+    if id == "" and (FINAL_STATES[record.state] or check_idle_for_long(record)) then
+      if record.updated_at ~= after then
+        return { status = record.state, kind = record.kind, msg = record.msg, at = record.updated_at }
+      end
+      turn_on_record = true
+    elseif id == CCW_RECORD and record.state == "idle" and record.updated_at ~= after then
+      suspended = record
     end
+  end
+  -- While the agent's own record holds its last turn, that record decides, so a wake still in flight is not an end.
+  if suspended and not turn_on_record then
+    return { status = "idle", kind = suspended.kind, msg = suspended.msg, at = suspended.updated_at }
   end
   return nil
 end

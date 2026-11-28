@@ -3,7 +3,8 @@
 
 The multiplexer is Rex when the caller runs inside a Rex terminal (REX_BLOCK is set), else Herdr; ISTACK_MUX=rex|herdr
 overrides that. Under Rex a worker is a window (a tab) named after the worker, in the session given with --session or in
-the caller's own session.
+the caller's own session. A Claude Code worker runs under ccw when it is installed (ISTACK_CCW names it, "" turns it off):
+ccw suspends the worker while it idles and wakes it on the next line typed into its terminal.
 
 The role table lives in ~/.claude/rules/istack-models.md, one `role: entry, entry` line per role.
 An entry is `<claude-model> <effort>`, `pi <provider/model> <effort>`, `codex <model> <effort>`,
@@ -14,6 +15,7 @@ import argparse
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import time
@@ -23,6 +25,7 @@ from pathlib import Path
 RULE_PATH = Path(os.environ.get("ISTACK_MODELS_RULE", "~/.claude/rules/istack-models.md")).expanduser()
 HC = os.environ.get("ISTACK_HC", "hc")
 REX = os.environ.get("ISTACK_REX", "rex")
+CCW = os.environ.get("ISTACK_CCW", "ccw")
 REX_WAIT_SCRIPT = Path(__file__).resolve().with_name("rex_wait_worker.lua")
 IGOROH_MODE_SKILL = Path(__file__).resolve().parent.parent / "skills" / "igoroh-mode" / "SKILL.md"
 REX_STATE = Path(os.environ.get("ISTACK_REX_STATE", "~/.cache/istack/rex")).expanduser()
@@ -116,7 +119,15 @@ def build_command(entry, effort=None):
         command += ["--model", entry["model"]]
     if effort:
         command += ["--effort", effort]
-    return command
+    return wrap_with_ccw(command)
+
+
+def wrap_with_ccw(command):
+    # The worker's terminal gets the path found here, so it runs the ccw this check saw, whatever its own PATH holds.
+    ccw = shutil.which(CCW) if CCW else None
+    if ccw is None:
+        return command
+    return [ccw, "--", *command]
 
 
 def convert_to_terminal_name(text):
@@ -415,7 +426,8 @@ def wait_for_worker(mux, name, report, max_seconds):
     while True:
         remaining = deadline - time.monotonic()
         if remaining <= 0:
-            return {"name": name, "status": "working", "report": str(Path(report).resolve()), "report_exists": False}
+            report_path = Path(report).resolve()
+            return {"name": name, "status": "working", "report": str(report_path), "report_exists": report_path.exists()}
         status = mux.wait_for_turn(name, max(1, min(WAIT_SLICE_SECONDS, int(remaining))), Path(report))
         if status is not None:
             return describe_outcome(mux, name, report, status)
